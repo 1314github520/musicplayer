@@ -1,0 +1,20 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.MusicPlayer" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your light theme here. -->
+        <item name="android:windowBackground">@color/bg_dark</item>
+        <item name="android:statusBarColor">@color/bg_dark</item>
+    </style>
+
+    <style name="Theme.MusicPlayer" parent="Base.Theme.MusicPlayer" />
+
+    <!-- Circle Image Style for ShapeableImageView -->
+    <style name="CircleImage">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.CircleImage</item>
+    </style>
+
+    <style name="ShapeAppearance.CircleImage" parent="ShapeAppearance.MaterialComponents">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+</resources>

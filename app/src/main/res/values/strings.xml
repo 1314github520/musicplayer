@@ -1,0 +1,47 @@
+<resources>
+    <string name="app_name">MusicPlayer</string>
+    <string name="discover">发现</string>
+    <string name="subscribe">订阅</string>
+    <string name="search_hint">单曲/歌手</string>
+    <string name="cancel">取消</string>
+    <string name="recent_search">最近搜索</string>
+    <string name="hot_search">大家都在听</string>
+    <string name="clear_history">清除历史</string>
+    <string name="recommended_radio">推荐频道Radio</string>
+    <string name="pop_music">流行</string>
+    <string name="subscribe_plus">+ 订阅</string>
+    <string name="recommended_channels">推荐频道</string>
+    <string name="theme_music_intro"> _ 主题音乐安利</string>
+    <string name="treasure_recommend">宝藏推荐</string>
+    <string name="taste_recommend"> _ 根据你的口味推荐</string>
+    <string name="new_song_express">⚡ 概念新歌速递</string>
+    <string name="mine">我的</string>
+    <string name="vip_tag">VIP 2024</string>
+    <string name="user_level">Lv.8</string>
+    <string name="default_signature">愿音乐治愈所有的不开心 ✨</string>
+    <string name="follow">关注</string>
+    <string name="fans">粉丝</string>
+    <string name="total_songs_format">累计听歌 %s 首</string>
+    <string name="edit_profile">编辑资料</string>
+    <string name="my_collection">我的收藏</string>
+    <string name="recent_played">最近播放</string>
+    <string name="local_download">本地下载</string>
+    <string name="import_music">导入音乐</string>
+    <string name="my_playlist">我的歌单</string>
+    <string name="empty_playlist_hint">暂无收藏歌单，快去发现好音乐吧</string>
+
+    <string name="song_1">春天终会回来</string>
+    <string name="artist_1">索日格哈</string>
+    <string name="song_2">敬往事三杯</string>
+    <string name="artist_2">孙茹雪</string>
+    <string name="song_3">依了阿里得</string>
+    <string name="artist_3">VaVa</string>
+
+    <string name="channel_1">流行网络BGM</string>
+    <string name="sub_count_1">178万人订阅</string>
+    <string name="channel_2">流行好听</string>
+    <string name="sub_count_2">2.1万人订阅</string>
+    <string name="channel_3">粤语频道</string>
+    <string name="sub_count_3">14万人订阅</string>
+    <string name="recommended_songs">推荐歌曲</string>
+</resources>

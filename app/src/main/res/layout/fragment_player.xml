@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#121214"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- Blurred Background -->
+    <ImageView
+        android:id="@+id/playerBackground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:alpha="0.3" />
+
+    <!-- Top Bar -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/playerBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:layout_marginTop="32dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@android:drawable/ic_menu_revert"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/white" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/playerSongTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="歌曲名"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/playerArtistName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="歌手名"
+                android:textColor="#88FFFFFF"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Content Area (Vinyl + Lyrics) -->
+    <FrameLayout
+        android:id="@+id/playerContent"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/playerControls"
+        app:layout_constraintTop_toBottomOf="@id/playerBar">
+
+        <!-- Vinyl Record View -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/vinylContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/playerAlbumCover"
+                android:layout_width="240dp"
+                android:layout_height="240dp"
+                android:layout_marginTop="30dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/music"
+                android:background="@drawable/vinyl_disk_bg"
+                android:transitionName="song_cover"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:shapeAppearanceOverlay="@style/CircleImage" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/lyricRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingTop="250dp"
+            android:paddingBottom="200dp"
+            android:clipToPadding="false"
+            android:visibility="visible" />
+    </FrameLayout>
+
+    <!-- Controls Area -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/playerControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="24dp"
+        android:paddingBottom="40dp"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <!-- 1. SeekBar & Time Row -->
+        <SeekBar
+            android:id="@+id/playerSeekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="1000"
+            android:progressDrawable="@drawable/progress_bar_drawable"
+            android:thumb="@drawable/player_seekbar_thumb"
+            android:thumbOffset="0dp"
+            android:splitTrack="false"
+            android:paddingStart="0dp"
+            android:paddingEnd="0dp"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvCurrentTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="00:00"
+            android:textColor="#66FFFFFF"
+            android:textSize="10sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/playerSeekBar" />
+
+        <TextView
+            android:id="@+id/tvTotalTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="00:00"
+            android:textColor="#66FFFFFF"
+            android:textSize="10sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/playerSeekBar" />
+
+        <!-- 2. Main Play Controls Row -->
+        <ImageView
+            android:id="@+id/btnPrev"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="30dp"
+            android:background="@drawable/btn_interactive_bg"
+            android:padding="18dp"
+            android:src="@android:drawable/ic_media_previous"
+            app:layout_constraintEnd_toStartOf="@+id/btnPlayPause"
+            app:layout_constraintHorizontal_chainStyle="spread_inside"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvCurrentTime"
+            app:tint="@color/white" />
+
+        <ImageView
+            android:id="@+id/btnPlayPause"
+            android:layout_width="76dp"
+            android:layout_height="76dp"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/btn_interactive_bg"
+            android:padding="22dp"
+            android:src="@android:drawable/ic_media_pause"
+            app:layout_constraintEnd_toStartOf="@+id/btnNext"
+            app:layout_constraintStart_toEndOf="@+id/btnPrev"
+            app:layout_constraintTop_toBottomOf="@id/tvCurrentTime"
+            app:tint="@color/white" />
+
+        <ImageView
+            android:id="@+id/btnNext"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="30dp"
+            android:background="@drawable/btn_interactive_bg"
+            android:padding="18dp"
+            android:src="@android:drawable/ic_media_next"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/btnPlayPause"
+            app:layout_constraintTop_toBottomOf="@id/tvCurrentTime"
+            app:tint="@color/white" />
+
+        <!-- 3. Bottom Utility Row -->
+        <ImageView
+            android:id="@+id/btnFavorite"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginTop="40dp"
+            android:src="@android:drawable/btn_star_big_off"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btnPlayPause"
+            app:tint="#88FFFFFF" />
+
+        <ImageView
+            android:id="@+id/btnLoopMode"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginTop="40dp"
+            android:src="@android:drawable/ic_menu_rotate"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btnPlayPause"
+            app:tint="#88FFFFFF" />
+
+        <ImageView
+            android:id="@+id/btnDownload"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginTop="40dp"
+            android:src="@android:drawable/stat_sys_download"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btnPlayPause"
+            app:tint="#88FFFFFF" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
