@@ -16,7 +16,8 @@ public class Song {
     public int duration; // in seconds
     public boolean isLocal;
     public boolean isFavorite;
-    public Integer lrcId; // lrclib API返回的歌词ID
+    public Long lrcId; // lrclib API返回的歌词ID
+    public String lyrics; // 存储歌词内容（标准LRC或纯文本）
 
     public Song(String title, String artist, String path, String coverUrl, boolean isLocal) {
         this.title = title;

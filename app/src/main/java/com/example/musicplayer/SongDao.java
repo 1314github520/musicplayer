@@ -50,6 +50,9 @@ public interface SongDao {
     @Query("SELECT * FROM songs WHERE id = :id")
     Song getSongById(int id);
 
+    @Query("SELECT lyrics FROM songs WHERE lrcId = :lrcId AND lyrics IS NOT NULL AND lyrics != '' LIMIT 1")
+    String getLyricsByLrcId(long lrcId);
+
     @Query("SELECT * FROM songs WHERE isFavorite = 1")
     LiveData<List<Song>> getFavoriteSongs();
 
@@ -65,4 +68,10 @@ public interface SongDao {
            "OR LOWER(album) LIKE :searchPattern " +
            "ORDER BY id DESC")
     List<Song> searchSongsLocal(String searchPattern);
+
+    @Query("DELETE FROM songs WHERE isLocal = 0")
+    void deleteRemoteSongs();
+
+    @Query("UPDATE songs SET isFavorite = 0")
+    void clearFavorites();
 }

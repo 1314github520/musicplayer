@@ -3,13 +3,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#121214"
+    android:background="@color/bg_dark"
     android:orientation="vertical"
     android:clickable="true"
     android:focusable="true"
     android:fitsSystemWindows="true">
 
-    <!-- Header -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="56dp"
@@ -21,27 +20,28 @@
             android:layout_height="32dp"
             android:layout_centerVertical="true"
             android:src="@android:drawable/ic_menu_revert"
-            app:tint="#FFFFFF" />
+            app:tint="@color/white" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:text="编辑资料"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/white"
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <TextView
+        <Button
             android:id="@+id/btnSave"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:text="保存"
-            android:textColor="#33A1FF"
+            android:textColor="@color/accent_teal"
             android:textSize="16sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:background="@null" />
     </RelativeLayout>
 
     <ScrollView
@@ -54,7 +54,6 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Avatar -->
             <RelativeLayout
                 android:id="@+id/layoutAvatar"
                 android:layout_width="match_parent"
@@ -65,7 +64,7 @@
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
                     android:text="头像"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/white"
                     android:textSize="16sp" />
 
                 <androidx.cardview.widget.CardView
@@ -92,10 +91,14 @@
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
                     android:src="@android:drawable/ic_media_next"
-                    app:tint="#44FFFFFF" />
+                    app:tint="@color/text_grey" />
             </RelativeLayout>
 
-            <!-- Nickname -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/card_bg" />
+
             <RelativeLayout
                 android:id="@+id/layoutNickname"
                 android:layout_width="match_parent"
@@ -106,7 +109,7 @@
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
                     android:text="昵称"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/white"
                     android:textSize="16sp" />
 
                 <TextView
@@ -116,8 +119,8 @@
                     android:layout_centerVertical="true"
                     android:layout_toStartOf="@id/arrow2"
                     android:layout_marginEnd="12dp"
-                    android:text="小霸王"
-                    android:textColor="#88FFFFFF"
+                    android:text="音乐爱好者"
+                    android:textColor="@color/text_grey"
                     android:textSize="14sp" />
 
                 <ImageView
@@ -127,46 +130,82 @@
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
                     android:src="@android:drawable/ic_media_next"
-                    app:tint="#44FFFFFF" />
+                    app:tint="@color/text_grey" />
             </RelativeLayout>
 
-            <!-- Signature -->
-            <RelativeLayout
-                android:id="@+id/layoutSignature"
+            <View
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="56dp"
-                android:paddingVertical="12dp">
+                android:layout_height="1dp"
+                android:background="@color/card_bg" />
+
+            <RelativeLayout
+                android:id="@+id/layoutEmail"
+                android:layout_width="match_parent"
+                android:layout_height="56dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="个性签名"
-                    android:textColor="#FFFFFF"
+                    android:layout_centerVertical="true"
+                    android:text="邮箱"
+                    android:textColor="@color/white"
                     android:textSize="16sp" />
 
                 <TextView
-                    android:id="@+id/tvSignature"
-                    android:layout_width="180dp"
+                    android:id="@+id/tvEmail"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_toStartOf="@id/arrow3"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@id/arrow5"
                     android:layout_marginEnd="12dp"
-                    android:gravity="end"
-                    android:text="愿音乐治愈所有的不开心 ✨"
-                    android:textColor="#88FFFFFF"
+                    android:text="example@email.com"
+                    android:textColor="@color/text_grey"
                     android:textSize="14sp" />
 
                 <ImageView
-                    android:id="@+id/arrow3"
+                    android:id="@+id/arrow5"
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:layout_alignParentEnd="true"
-                    android:layout_marginTop="4dp"
+                    android:layout_centerVertical="true"
                     android:src="@android:drawable/ic_media_next"
-                    app:tint="#44FFFFFF" />
+                    app:tint="@color/text_grey" />
             </RelativeLayout>
 
-            <!-- Gender -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/card_bg" />
+
+            <RelativeLayout
+                android:id="@+id/layoutPhone"
+                android:layout_width="match_parent"
+                android:layout_height="56dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:text="手机号"
+                    android:textColor="@color/white"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/tvPhone"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:text="未绑定"
+                    android:textColor="@color/text_grey"
+                    android:textSize="14sp" />
+            </RelativeLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/card_bg" />
+
             <RelativeLayout
                 android:id="@+id/layoutGender"
                 android:layout_width="match_parent"
@@ -177,7 +216,7 @@
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
                     android:text="性别"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/white"
                     android:textSize="16sp" />
 
                 <TextView
@@ -185,23 +224,27 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
-                    android:layout_toStartOf="@id/arrow4"
+                    android:layout_toStartOf="@id/arrow3"
                     android:layout_marginEnd="12dp"
-                    android:text="男"
-                    android:textColor="#88FFFFFF"
+                    android:text="保密"
+                    android:textColor="@color/text_grey"
                     android:textSize="14sp" />
 
                 <ImageView
-                    android:id="@+id/arrow4"
+                    android:id="@+id/arrow3"
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
                     android:src="@android:drawable/ic_media_next"
-                    app:tint="#44FFFFFF" />
+                    app:tint="@color/text_grey" />
             </RelativeLayout>
 
-            <!-- Birthday -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/card_bg" />
+
             <RelativeLayout
                 android:id="@+id/layoutBirthday"
                 android:layout_width="match_parent"
@@ -212,54 +255,33 @@
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
                     android:text="生日"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/white"
                     android:textSize="16sp" />
 
                 <TextView
                     android:id="@+id/tvBirthday"
-                    android:layout_width="200dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
-                    android:layout_toStartOf="@id/arrow5"
+                    android:layout_toStartOf="@id/arrow4"
                     android:layout_marginEnd="12dp"
-                    android:gravity="end"
-                    android:text="填写生日，可以收到酷狗生日礼券哦~"
-                    android:textColor="#44FFFFFF"
-                    android:textSize="12sp" />
+                    android:text="未设置"
+                    android:textColor="@color/text_grey"
+                    android:textSize="14sp" />
 
                 <ImageView
-                    android:id="@+id/arrow5"
+                    android:id="@+id/arrow4"
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
                     android:src="@android:drawable/ic_media_next"
-                    app:tint="#44FFFFFF" />
+                    app:tint="@color/text_grey" />
             </RelativeLayout>
 
-            <!-- ID (Non-editable) -->
-            <RelativeLayout
+            <View
                 android:layout_width="match_parent"
-                android:layout_height="56dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:text="ID"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:id="@+id/tvUserId"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:text="1876006358"
-                    android:textColor="#44FFFFFF"
-                    android:textSize="14sp" />
-            </RelativeLayout>
+                android:layout_height="40dp" />
 
         </LinearLayout>
     </ScrollView>

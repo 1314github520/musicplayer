@@ -2,6 +2,8 @@ package com.example.musicplayer;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.KeyEvent;
@@ -38,6 +40,10 @@ public class SearchActivity extends AppCompatActivity {
     private ImageView btnClearHistory;
     private SearchResultAdapter searchAdapter;
     private List<String> searchHistory = new ArrayList<>();
+
+    private final Handler searchHandler = new Handler(Looper.getMainLooper());
+    private Runnable searchRunnable;
+    private static final long SEARCH_DEBOUNCE_DELAY = 500; // 500ms delay
 
     private static final String PREF_NAME = "search_prefs";
     private static final String KEY_HISTORY = "search_history";
@@ -100,8 +106,13 @@ public class SearchActivity extends AppCompatActivity {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (searchRunnable != null) {
+                    searchHandler.removeCallbacks(searchRunnable);
+                }
+
                 if (s.length() > 0) {
-                    performSearch(s.toString());
+                    searchRunnable = () -> performSearch(s.toString());
+                    searchHandler.postDelayed(searchRunnable, SEARCH_DEBOUNCE_DELAY);
                 } else {
                     showSuggestions();
                 }
@@ -140,8 +151,8 @@ public class SearchActivity extends AppCompatActivity {
             showSuggestions();
             return;
         }
-        // 使用新的搜索API，默认加载50条结果
-        viewModel.searchSongs(query, 1, 50);
+        // 使用新的搜索API
+        viewModel.searchSongs(query);
     }
     
     private void saveSearchQuery(String query) {
@@ -253,6 +264,14 @@ public class SearchActivity extends AppCompatActivity {
         updateRecentSearchUI();
     }
     
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (searchRunnable != null) {
+            searchHandler.removeCallbacks(searchRunnable);
+        }
+    }
+
     @Override
     public void finish() {
         super.finish();

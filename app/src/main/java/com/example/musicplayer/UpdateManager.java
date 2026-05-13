@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.FileProvider;
@@ -21,10 +22,10 @@ import okhttp3.Response;
 
 public class UpdateManager {
     private static final String CHANNEL_ID = "update_channel";
-    private static final String BASE_URL = "https://hello.584399.xyz";
+    private static final String BASE_URL = "http://8.162.14.195:3000";
     private static final int NOTIFICATION_ID = 9999;
     
-    private static UpdateManager instance;
+    private static volatile UpdateManager instance;
     private final Context context;
     private final ExecutorService executorService;
     private final OkHttpClient client;
@@ -58,19 +59,40 @@ public class UpdateManager {
     private UpdateManager(Context context) {
         this.context = context.getApplicationContext();
         this.executorService = Executors.newSingleThreadExecutor();
-        this.client = new OkHttpClient.Builder()
-            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-            .build();
+        this.client = HttpClient.getInstance();
         this.notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         createNotificationChannel();
+        cleanupOldApks();
     }
     
-    public static synchronized UpdateManager getInstance(Context context) {
+    public static UpdateManager getInstance(Context context) {
         if (instance == null) {
-            instance = new UpdateManager(context);
+            synchronized (UpdateManager.class) {
+                if (instance == null) {
+                    instance = new UpdateManager(context);
+                    instance.cleanupOldApks();
+                }
+            }
         }
         return instance;
+    }
+
+    private void cleanupOldApks() {
+        executorService.execute(() -> {
+            try {
+                File dir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS);
+                if (dir != null && dir.exists()) {
+                    File[] files = dir.listFiles((d, name) -> name.endsWith(".apk"));
+                    if (files != null) {
+                        for (File file : files) {
+                            file.delete();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.e("UpdateManager", "Failed to cleanup old APKs", e);
+            }
+        });
     }
     
     private void createNotificationChannel() {
@@ -85,10 +107,12 @@ public class UpdateManager {
     }
     
     public void checkUpdate(CheckUpdateCallback callback) {
+        final CheckUpdateCallback finalCallback = callback;
         executorService.execute(() -> {
             try {
+                // 后端 Node.js 服务器路径为 /api/app/version
                 Request request = new Request.Builder()
-                    .url(BASE_URL + "/app/version")
+                    .url(BASE_URL + "/api/app/version")
                     .build();
                 
                 try (Response response = client.newCall(request).execute()) {
@@ -96,23 +120,53 @@ public class UpdateManager {
                         String json = response.body().string();
                         ApiResponse apiResponse = new com.google.gson.Gson().fromJson(json, ApiResponse.class);
                         
-                        if (apiResponse.code == 0 && apiResponse.data != null) {
+                        if (apiResponse != null && apiResponse.data != null) {
                             int currentVersionCode = getCurrentVersionCode();
+                            VersionInfo info = apiResponse.data;
                             
-                            if (apiResponse.data.versionCode > currentVersionCode) {
-                                notifyOnMainThread(() -> callback.onUpdateAvailable(apiResponse.data));
+                            // 补全相对路径的下载链接
+                            if (info.downloadUrl != null && !info.downloadUrl.startsWith("http")) {
+                                if (info.downloadUrl.startsWith("/")) {
+                                    info.downloadUrl = BASE_URL + info.downloadUrl;
+                                } else {
+                                    info.downloadUrl = BASE_URL + "/" + info.downloadUrl;
+                                }
+                            }
+
+                            if (info.versionCode > currentVersionCode) {
+                                notifyOnMainThread(() -> {
+                                    if (finalCallback != null) {
+                                        finalCallback.onUpdateAvailable(info);
+                                    }
+                                });
                             } else {
-                                notifyOnMainThread(() -> callback.onNoUpdate());
+                                notifyOnMainThread(() -> {
+                                    if (finalCallback != null) {
+                                        finalCallback.onNoUpdate();
+                                    }
+                                });
                             }
                         } else {
-                            notifyOnMainThread(() -> callback.onError("解析版本信息失败"));
+                            notifyOnMainThread(() -> {
+                                if (finalCallback != null) {
+                                    finalCallback.onError("解析版本信息失败");
+                                }
+                            });
                         }
                     } else {
-                        notifyOnMainThread(() -> callback.onError("网络请求失败: " + response.code()));
+                        notifyOnMainThread(() -> {
+                            if (finalCallback != null) {
+                                finalCallback.onError("网络请求失败: " + response.code());
+                            }
+                        });
                     }
                 }
             } catch (Exception e) {
-                notifyOnMainThread(() -> callback.onError("检查更新失败: " + e.getMessage()));
+                notifyOnMainThread(() -> {
+                    if (finalCallback != null) {
+                        finalCallback.onError("检查更新失败: " + e.getMessage());
+                    }
+                });
             }
         });
     }
@@ -185,15 +239,21 @@ public class UpdateManager {
     }
     
     private void notifyProgress(DownloadCallback callback, int progress) {
-        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onProgress(progress));
+        if (callback != null) {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onProgress(progress));
+        }
     }
     
     private void notifySuccess(DownloadCallback callback, File apkFile) {
-        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onSuccess(apkFile));
+        if (callback != null) {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onSuccess(apkFile));
+        }
     }
     
     private void notifyError(DownloadCallback callback, String message) {
-        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError(message));
+        if (callback != null) {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError(message));
+        }
     }
     
     private void showNotification(String title, String content, int progress, boolean ongoing) {

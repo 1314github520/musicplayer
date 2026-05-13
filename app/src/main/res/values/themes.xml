@@ -8,6 +8,32 @@
 
     <style name="Theme.MusicPlayer" parent="Base.Theme.MusicPlayer" />
 
+    <style name="DarkDialog" parent="Theme.Material3.DayNight.Dialog">
+        <item name="android:windowBackground">@color/card_bg</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/text_grey</item>
+        <item name="android:textColorAlertDialogListItem">@color/white</item>
+        <item name="colorSurface">@color/card_bg</item>
+        <item name="colorOnSurface">@color/white</item>
+        <item name="colorOnSurfaceVariant">@color/text_grey</item>
+        <item name="colorPrimary">@color/accent_teal</item>
+        <item name="colorSecondary">@color/accent_teal</item>
+    </style>
+
+    <style name="BlueDatePicker" parent="Theme.Material3.DayNight.Dialog">
+        <item name="colorPrimary">#2196F3</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSurface">@color/card_bg</item>
+        <item name="colorOnSurface">@color/white</item>
+        <item name="colorOnSurfaceVariant">#DDDDDD</item> <!-- 调亮辅助文字，如星期、月份标题 -->
+        <item name="android:windowBackground">@color/card_bg</item>
+        <item name="android:headerBackground">#2196F3</item>
+        <item name="android:calendarTextColor">@color/white</item>
+        <item name="android:dayOfWeekBackground">@color/card_bg</item>
+        <item name="android:textColorPrimary">@color/white</item>
+    </style>
+
     <!-- Circle Image Style for ShapeableImageView -->
     <style name="CircleImage">
         <item name="shapeAppearanceOverlay">@style/ShapeAppearance.CircleImage</item>

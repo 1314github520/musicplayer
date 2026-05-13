@@ -1,5 +1,6 @@
 package com.example.musicplayer;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -8,6 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -24,6 +26,11 @@ public class MineFragment extends Fragment {
     private TextView signatureText;
     private TextView tvTotalSongs;
     private TextView vipTag;
+    private TextView tvUserId;
+    private TextView tvGender;
+    private TextView tvBirthday;
+    private Button btnLogin;
+    private View userInfoContainer;
     private static final String PROFILE_IMAGE_URL = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop";
 
     private LottieAnimationView assistantView;
@@ -52,6 +59,11 @@ public class MineFragment extends Fragment {
         signatureText = view.findViewById(R.id.signature);
         tvTotalSongs = view.findViewById(R.id.tvTotalSongs);
         vipTag = view.findViewById(R.id.vipTag);
+        tvUserId = view.findViewById(R.id.tvUserId);
+        tvGender = view.findViewById(R.id.tvGender);
+        tvBirthday = view.findViewById(R.id.tvBirthday);
+        btnLogin = view.findViewById(R.id.btnLogin);
+        userInfoContainer = view.findViewById(R.id.userInfoContainer);
         assistantView = view.findViewById(R.id.assistantView);
         assistantBubble = view.findViewById(R.id.assistantBubble);
         assistantText = view.findViewById(R.id.assistantText);
@@ -60,8 +72,36 @@ public class MineFragment extends Fragment {
         setupPlaylist(view);
         setupGridListeners(view);
         setupAssistant();
-        loadProfileImage();
         return view;
+    }
+
+    private void updateLoginState() {
+        UserManager userManager = UserManager.getInstance(requireContext());
+        boolean isLoggedIn = userManager.isLoggedIn();
+        
+        btnLogin.setVisibility(isLoggedIn ? View.GONE : View.VISIBLE);
+        userInfoContainer.setVisibility(isLoggedIn ? View.VISIBLE : View.GONE);
+        
+        if (!isLoggedIn) {
+            btnLogin.setOnClickListener(v -> {
+                Intent intent = new Intent(requireContext(), LoginActivity.class);
+                startActivity(intent);
+            });
+            // 清除旧的头像
+            profileImage.setImageResource(R.drawable.music);
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        viewModel.refreshProfile(); // 确保从本地/内存同步最新数据
+        updateLoginState();
+    }
+    
+    private void refreshUserInfo() {
+        // 该方法逻辑已整合到 updateLoginState 和 setupProfileInfo 的观察者中
+        updateLoginState();
     }
 
     private void setupAssistant() {
@@ -75,29 +115,42 @@ public class MineFragment extends Fragment {
     private void showAssistantQuote() {
         if (assistantBubble == null || assistantText == null) return;
 
-        String quote = assistantQuotes[random.nextInt(assistantQuotes.length)];
-        assistantText.setText(quote);
-
+        // 取消之前的动画和延时任务，防止冲突
+        assistantBubble.animate().cancel();
         if (hideBubbleRunnable != null) {
             assistantBubble.removeCallbacks(hideBubbleRunnable);
         }
 
+        String quote = assistantQuotes[random.nextInt(assistantQuotes.length)];
+        assistantText.setText(quote);
+
+        assistantBubble.setVisibility(View.VISIBLE);
         assistantBubble.animate()
                 .alpha(1f)
-                .translationY(-10f)
+                .translationY(-20f) // 稍微加大位移，动感更强
                 .setDuration(300)
-                .withStartAction(() -> assistantBubble.setVisibility(View.VISIBLE))
                 .start();
 
         hideBubbleRunnable = () -> {
-            assistantBubble.animate()
-                    .alpha(0f)
-                    .translationY(0f)
-                    .setDuration(500)
-                    .withEndAction(() -> assistantBubble.setVisibility(View.GONE))
-                    .start();
+            if (assistantBubble != null) {
+                assistantBubble.animate()
+                        .alpha(0f)
+                        .translationY(0f)
+                        .setDuration(500)
+                        .withEndAction(() -> assistantBubble.setVisibility(View.GONE))
+                        .start();
+            }
         };
         assistantBubble.postDelayed(hideBubbleRunnable, 3000);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // 清理延时任务，防止内存泄漏
+        if (assistantBubble != null && hideBubbleRunnable != null) {
+            assistantBubble.removeCallbacks(hideBubbleRunnable);
+        }
     }
 
     private void setupProfileInfo() {
@@ -112,13 +165,18 @@ public class MineFragment extends Fragment {
         viewModel.getUserSignature().observe(getViewLifecycleOwner(), sig -> {
             if (signatureText != null) signatureText.setText(sig);
         });
+        viewModel.getUserId().observe(getViewLifecycleOwner(), id -> {
+            if (tvUserId != null) tvUserId.setText(id);
+        });
+        viewModel.getUserGender().observe(getViewLifecycleOwner(), gender -> {
+            if (tvGender != null) tvGender.setText(gender);
+        });
+        viewModel.getUserBirthday().observe(getViewLifecycleOwner(), birthday -> {
+            if (tvBirthday != null) tvBirthday.setText(birthday);
+        });
         viewModel.getUserAvatarUri().observe(getViewLifecycleOwner(), uri -> {
-            if (profileImage != null) {
-                ImageRequest request = new ImageRequest.Builder(requireContext())
-                        .data(uri)
-                        .target(profileImage)
-                        .build();
-                Coil.imageLoader(requireContext()).enqueue(request);
+            if (uri != null && !uri.isEmpty()) {
+                loadUserAvatar();
             }
         });
 
@@ -129,104 +187,98 @@ public class MineFragment extends Fragment {
             }
         });
     }
-
-    private void setupPlaylist(View rootView) {
-        viewModel.getFavoriteCount().observe(getViewLifecycleOwner(), count -> {
-            View grid = rootView.findViewById(R.id.functionGrid);
-            if (grid instanceof android.view.ViewGroup) {
-                updateStatCard((android.view.ViewGroup) grid, 0, count);
+    
+    private void loadUserAvatar() {
+        UserManager userManager = UserManager.getInstance(requireContext());
+        User user = userManager.getCurrentUser();
+        if (user != null && user.getAvatar() != null && !user.getAvatar().isEmpty()) {
+            String avatarUrl = user.getAvatar().startsWith("http") ? user.getAvatar() : Constants.API.BASE_URL + user.getAvatar();
+            
+            android.content.SharedPreferences prefs = requireContext().getSharedPreferences("avatar_prefs", android.content.Context.MODE_PRIVATE);
+            long savedUpdateTime = prefs.getLong("avatar_update_time", 0);
+            long lastLoadTime = prefs.getLong("last_load_time", 0);
+            
+            boolean shouldReload = savedUpdateTime > lastLoadTime;
+            
+            String finalAvatarUrl;
+            if (shouldReload) {
+                prefs.edit()
+                        .putLong("last_load_time", savedUpdateTime)
+                        .apply();
+                
+                finalAvatarUrl = avatarUrl + (avatarUrl.contains("?") ? "&t=" : "?t=") + System.currentTimeMillis();
+            } else {
+                finalAvatarUrl = avatarUrl;
             }
-        });
-        viewModel.getDownloadedCount().observe(getViewLifecycleOwner(), count -> {
-            View grid = rootView.findViewById(R.id.functionGrid);
-            if (grid instanceof android.view.ViewGroup) {
-                updateStatCard((android.view.ViewGroup) grid, 2, count);
-            }
-        });
-        viewModel.getImportedCount().observe(getViewLifecycleOwner(), count -> {
-            View grid = rootView.findViewById(R.id.functionGrid);
-            if (grid instanceof android.view.ViewGroup) {
-                updateStatCard((android.view.ViewGroup) grid, 3, count);
-            }
-        });
-
-        viewModel.getRecentCount().observe(getViewLifecycleOwner(), count -> {
-            View grid = rootView.findViewById(R.id.functionGrid);
-            if (grid instanceof android.view.ViewGroup) {
-                updateStatCard((android.view.ViewGroup) grid, 1, count);
-            }
-        });
+            
+            ImageRequest request = new ImageRequest.Builder(requireContext())
+                    .data(finalAvatarUrl)
+                    .target(profileImage)
+                    .placeholder(R.drawable.music)
+                    .error(R.drawable.music)
+                    .crossfade(true)
+                    .build();
+            Coil.imageLoader(requireContext()).enqueue(request);
+        }
     }
 
-    private void updateStatCard(android.view.ViewGroup grid, int index, int value) {
-        if (grid != null && index < grid.getChildCount()) {
-            View card = grid.getChildAt(index);
-            if (card instanceof androidx.cardview.widget.CardView) {
-                View inner = ((androidx.cardview.widget.CardView) card).getChildAt(0);
-                if (inner instanceof android.widget.LinearLayout) {
-                    android.widget.LinearLayout layout = (android.widget.LinearLayout) inner;
-                    if (layout.getChildCount() > 3) {
-                        View text = layout.getChildAt(3);
-                        if (text instanceof android.widget.TextView) {
-                            ((android.widget.TextView) text).setText(String.valueOf(value));
-                        }
-                    }
-                }
-            }
-        }
+    private void setupPlaylist(View rootView) {
+        TextView tvCollection = rootView.findViewById(R.id.tvCollectionCount);
+        TextView tvRecent = rootView.findViewById(R.id.tvRecentCount);
+        TextView tvDownload = rootView.findViewById(R.id.tvDownloadCount);
+        TextView tvImport = rootView.findViewById(R.id.tvImportCount);
+
+        viewModel.getFavoriteCount().observe(getViewLifecycleOwner(), count -> {
+            if (tvCollection != null) tvCollection.setText(String.valueOf(count));
+        });
+        viewModel.getRecentCount().observe(getViewLifecycleOwner(), count -> {
+            if (tvRecent != null) tvRecent.setText(String.valueOf(count));
+        });
+        viewModel.getDownloadedCount().observe(getViewLifecycleOwner(), count -> {
+            if (tvDownload != null) tvDownload.setText(String.valueOf(count));
+        });
+        viewModel.getImportedCount().observe(getViewLifecycleOwner(), count -> {
+            if (tvImport != null) tvImport.setText(String.valueOf(count));
+        });
     }
 
     private void setupGridListeners(View view) {
-        android.view.ViewGroup grid = view.findViewById(R.id.functionGrid);
-        if (grid != null) {
-            for (int i = 0; i < grid.getChildCount(); i++) {
-                View child = grid.getChildAt(i);
-                final int index = i;
-                child.setOnClickListener(v -> {
-                    if (index == 0) {
-                        getParentFragmentManager().beginTransaction()
-                                .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out, android.R.anim.fade_in, android.R.anim.fade_out)
-                                .replace(R.id.fragment_container, new FavoriteMusicFragment())
-                                .addToBackStack(null)
-                                .commit();
-                    } else if (index == 1) {
-                        getParentFragmentManager().beginTransaction()
-                                .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out, android.R.anim.fade_in, android.R.anim.fade_out)
-                                .replace(R.id.fragment_container, new RecentPlayFragment())
-                                .addToBackStack(null)
-                                .commit();
-                    } else if (index == 2) {
-                        getParentFragmentManager().beginTransaction()
-                                .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out, android.R.anim.fade_in, android.R.anim.fade_out)
-                                .replace(R.id.fragment_container, new LocalMusicFragment())
-                                .addToBackStack(null)
-                                .commit();
-                    } else if (index == 3) {
-                        getParentFragmentManager().beginTransaction()
-                                .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out, android.R.anim.fade_in, android.R.anim.fade_out)
-                                .replace(R.id.fragment_container, new ImportedMusicFragment())
-                                .addToBackStack(null)
-                                .commit();
-                    }
-                });
-            }
+        View cardCollection = view.findViewById(R.id.cardCollection);
+        if (cardCollection != null) {
+            cardCollection.setOnClickListener(v -> navigateTo(new FavoriteMusicFragment()));
         }
 
-        view.findViewById(R.id.btnEdit).setOnClickListener(v -> {
-            getParentFragmentManager().beginTransaction()
-                    .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out, android.R.anim.fade_in, android.R.anim.fade_out)
-                    .replace(R.id.fragment_container, new EditProfileFragment())
-                    .addToBackStack(null)
-                    .commit();
-        });
+        View cardRecent = view.findViewById(R.id.cardRecent);
+        if (cardRecent != null) {
+            cardRecent.setOnClickListener(v -> navigateTo(new RecentPlayFragment()));
+        }
 
-        view.findViewById(R.id.cardSettings).setOnClickListener(v -> {
-            getParentFragmentManager().beginTransaction()
-                    .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out, android.R.anim.fade_in, android.R.anim.fade_out)
-                    .replace(R.id.fragment_container, new SettingsFragment())
-                    .addToBackStack(null)
-                    .commit();
-        });
+        View cardDownload = view.findViewById(R.id.cardDownload);
+        if (cardDownload != null) {
+            cardDownload.setOnClickListener(v -> navigateTo(new LocalMusicFragment()));
+        }
+
+        View cardImport = view.findViewById(R.id.cardImport);
+        if (cardImport != null) {
+            cardImport.setOnClickListener(v -> navigateTo(new ImportedMusicFragment()));
+        }
+
+        view.findViewById(R.id.btnEdit).setOnClickListener(v -> navigateTo(new EditProfileFragment()));
+        view.findViewById(R.id.cardSettings).setOnClickListener(v -> navigateTo(new SettingsFragment()));
+
+        // 为设置右侧的更多符号添加点击事件，显示小助理文案
+        View ivSettingsMore = view.findViewById(R.id.ivSettingsMore);
+        if (ivSettingsMore != null) {
+            ivSettingsMore.setOnClickListener(v -> showAssistantQuote());
+        }
+    }
+
+    private void navigateTo(androidx.fragment.app.Fragment fragment) {
+        getParentFragmentManager().beginTransaction()
+                .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out, android.R.anim.fade_in, android.R.anim.fade_out)
+                .replace(R.id.fragment_container, fragment)
+                .addToBackStack(null)
+                .commit();
     }
 
     private void loadProfileImage() {

@@ -1,5 +1,6 @@
 package com.example.musicplayer;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -30,19 +31,17 @@ public class LrcLibService {
     private static final String API_GET_CACHED = "https://lrclib.net/api/get-cached";
     private static final String API_SEARCH = "https://lrclib.net/api/search";
     
-    // User-Agent encouraged by LRCLIB documentation
     private static final String USER_AGENT = "MusicPlayer/1.0 https://github.com/1314github520/musicplayer)";
 
-    private final OkHttpClient client = new OkHttpClient();
+    private final OkHttpClient client = HttpClient.getInstance();
     private final Gson gson = new Gson();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-
-    // Increase cache size and include duration in key for better accuracy
-    private final LruCache<String, String> cache = new LruCache<>(100);
+    private final LruCache<String, String> cache = new LruCache<>(500);
     private final Map<String, List<LyricsCallback>> pendingMap = new HashMap<>();
+    private LyricCacheManager persistentCache;
 
     public interface LyricsCallback {
-        void onSuccess(String lrcContent, Integer lrcId);
+        void onSuccess(String lrcContent, Long lrcId);
         void onError(String message);
     }
 
@@ -51,28 +50,38 @@ public class LrcLibService {
         String trackName;
         String artistName;
         String albumName;
-        double duration; // API uses number, can be decimal
+        double duration;
         boolean instrumental;
         String syncedLyrics;
         String plainLyrics;
     }
+    
+    public void init(Context context) {
+        this.persistentCache = LyricCacheManager.getInstance(context);
+        this.persistentCache.clearExpiredCache();
+    }
 
-    /**
-     * Fetch lyrics with a multi-step fallback strategy for maximum accuracy and efficiency.
-     */
     public void fetchLyrics(String title, String artist, String album, int duration, LyricsCallback callback) {
         if (title == null || title.trim().isEmpty()) {
             postError(callback, "Empty title");
             return;
         }
 
-        // Cache key: title + artist + duration to distinguish different versions
         String key = (title + "_" + artist + "_" + duration).toLowerCase();
 
         String cached = cache.get(key);
         if (cached != null) {
             postSuccess(callback, cached);
             return;
+        }
+        
+        if (persistentCache != null) {
+            String persistentCached = persistentCache.getLyric(key);
+            if (persistentCached != null) {
+                cache.put(key, persistentCached);
+                postSuccess(callback, persistentCached);
+                return;
+            }
         }
 
         synchronized (pendingMap) {
@@ -94,7 +103,7 @@ public class LrcLibService {
      * Fetch lyrics by lrc_id directly from LRCLIB API.
      * This is the most accurate method when lrc_id is available.
      */
-    public void fetchLyricsById(int lrcId, LyricsCallback callback) {
+    public void fetchLyricsById(long lrcId, LyricsCallback callback) {
         String key = "lrc_id_" + lrcId;
 
         String cached = cache.get(key);
@@ -165,7 +174,7 @@ public class LrcLibService {
                                 List<LyricsCallback> callbacks = pendingMap.remove(key);
                                 if (callbacks != null) {
                                     for (LyricsCallback cb : callbacks) {
-                                        cb.onSuccess(lrc, lrcId);
+                                        cb.onSuccess(lrc, item.id);
                                     }
                                 }
                             }
@@ -232,7 +241,7 @@ public class LrcLibService {
                         LrcItem item = gson.fromJson(json, LrcItem.class);
                         String lrc = extractLrc(item);
                         if (lrc != null) {
-                            finishSuccess(key, lrc);
+                            finishSuccess(key, lrc, item.id);
                             return;
                         }
                     }
@@ -249,10 +258,15 @@ public class LrcLibService {
                               int duration, String key, boolean fallbackToGet) {
         if (api.equals(API_GET_CACHED) && fallbackToGet) {
             // Phase 2: Try get (triggers external search if needed)
-            requestGet(API_GET, title, artist, album, duration, key, false);
+            // 如果时长为0，get API 通常无法返回准确结果，可能直接尝试 search
+            if (duration > 0) {
+                requestGet(API_GET, title, artist, album, duration, key, false);
+            } else {
+                mainHandler.postDelayed(() -> performSearch(title, artist, album, duration, key, 0), 200);
+            }
         } else {
             // Phase 3: Try search (fuzzy matching) with delay
-            mainHandler.postDelayed(() -> performSearch(title, artist, album, duration, key, 0), 500);
+            mainHandler.postDelayed(() -> performSearch(title, artist, album, duration, key, 0), 300);
         }
     }
 
@@ -312,7 +326,7 @@ public class LrcLibService {
                     String lrc = extractLrc(best);
 
                     if (lrc != null) {
-                        finishSuccess(key, lrc);
+                        finishSuccess(key, lrc, best.id);
                     } else {
                         mainHandler.postDelayed(() -> 
                             performSearch(title, artist, album, duration, key, depth + 1), 1000);
@@ -337,25 +351,31 @@ public class LrcLibService {
 
             int score = 0;
 
-            // ❌ 过滤日文（如果用户不是日文）
+            // ❌ 过滤日文（如果用户输入中没有日文，而匹配项有日文，通常是匹配到了日文翻唱版）
             if (!userIsJapanese && (hasJapanese(item.trackName) || hasJapanese(item.artistName))) {
                 continue;
             }
 
             // 🎯 标题匹配
-            if (isSame(item.trackName, title)) score += 40;
+            if (isSame(item.trackName, title)) score += 50;
             else if (containsIgnoreCase(item.trackName, title)) score += 20;
 
             // 🎤 歌手匹配
-            if (isSame(item.artistName, artist)) score += 30;
+            if (isSame(item.artistName, artist)) score += 40;
             else if (containsIgnoreCase(item.artistName, artist)) score += 15;
 
-            // ⏱ 时长匹配（核心）
-            if (Math.abs(item.duration - targetDuration) <= 2) score += 30;
-            else if (Math.abs(item.duration - targetDuration) <= 5) score += 15;
+            // ⏱ 时长匹配
+            if (targetDuration > 0) {
+                if (Math.abs(item.duration - targetDuration) <= 2) score += 30;
+                else if (Math.abs(item.duration - targetDuration) <= 5) score += 15;
+                else if (Math.abs(item.duration - targetDuration) > 15) score -= 20; // 时长差距过大减分
+            } else {
+                // 如果没有时长，稍微给带时长信息的项一点分数
+                if (item.duration > 0) score += 5;
+            }
 
             // 🎵 同步歌词优先
-            if (item.syncedLyrics != null) score += 10;
+            if (item.syncedLyrics != null && !item.syncedLyrics.isEmpty()) score += 15;
 
             // 🎧 纯音乐处理
             if (item.instrumental) score += 5;
@@ -366,14 +386,13 @@ public class LrcLibService {
             }
         }
 
-        // 🔁 如果全被过滤（比如全是日文），再放开限制
-        if (best == null) {
+        // 🔁 如果全被过滤（比如全是日文），再放开限制重新评分
+        if (best == null || bestScore < 20) {
             for (LrcItem item : list) {
                 int score = 0;
-
                 if (isSame(item.trackName, title)) score += 40;
                 if (isSame(item.artistName, artist)) score += 30;
-                if (Math.abs(item.duration - targetDuration) <= 3) score += 20;
+                if (targetDuration > 0 && Math.abs(item.duration - targetDuration) <= 5) score += 20;
                 if (item.syncedLyrics != null) score += 10;
 
                 if (score > bestScore) {
@@ -419,15 +438,18 @@ public class LrcLibService {
         return null;
     }
 
-    private void finishSuccess(String key, String lrc) {
+    private void finishSuccess(String key, String lrc, Long lrcId) {
         cache.put(key, lrc);
+        if (persistentCache != null) {
+            persistentCache.putLyric(key, lrc);
+        }
         List<LyricsCallback> callbacks;
         synchronized (pendingMap) {
             callbacks = pendingMap.remove(key);
         }
         if (callbacks != null) {
             for (LyricsCallback cb : callbacks) {
-                postSuccess(cb, lrc);
+                postSuccess(cb, lrc, lrcId);
             }
         }
     }
@@ -448,7 +470,7 @@ public class LrcLibService {
         postSuccess(cb, lrc, null);
     }
     
-    private void postSuccess(LyricsCallback cb, String lrc, Integer lrcId) {
+    private void postSuccess(LyricsCallback cb, String lrc, Long lrcId) {
         mainHandler.post(() -> cb.onSuccess(lrc, lrcId));
     }
 
@@ -468,3 +490,4 @@ public class LrcLibService {
         client.dispatcher().cancelAll();
     }
 }
+

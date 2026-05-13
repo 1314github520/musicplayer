@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- 允许访问您的阿里云服务器 IP -->
+        <domain includeSubdomains="true">8.162.14.195</domain>
+    </domain-config>
+</network-security-config>

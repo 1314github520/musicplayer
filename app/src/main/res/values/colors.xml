@@ -9,4 +9,9 @@
     <color name="text_grey">#999999</color>
     <color name="search_bg">#1A1D21</color>
     <color name="background_darker">#0D0F12</color>
+
+    <color name="colorPrimary">#26D1D1</color>
+    <color name="gray">#9E9E9E</color>
+    <color name="light_gray">#E0E0E0</color>
+    <color name="red">#FF4444</color>
 </resources>

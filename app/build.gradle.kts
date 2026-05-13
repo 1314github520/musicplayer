@@ -28,8 +28,8 @@ android {
         applicationId = "com.xqf.musicplayer"
         minSdk = 31
         targetSdk = 35
-        versionCode = 12
-        versionName = "v1.2"
+        versionCode = 18
+        versionName = "v1.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -87,3 +87,4 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
 }
+

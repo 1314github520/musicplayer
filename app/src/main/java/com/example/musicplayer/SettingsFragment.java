@@ -4,8 +4,11 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -37,8 +40,167 @@ public class SettingsFragment extends Fragment {
         tvCurrentVersion.setText("当前版本: " + getAppVersionName());
 
         view.findViewById(R.id.layoutCheckUpdate).setOnClickListener(v -> checkForUpdate());
+        view.findViewById(R.id.layoutChangePassword).setOnClickListener(v -> showChangePasswordDialog());
+        view.findViewById(R.id.layoutAbout).setOnClickListener(v -> showAboutDialog());
+        view.findViewById(R.id.layoutLogout).setOnClickListener(v -> showLogoutDialog());
+        view.findViewById(R.id.layoutDeleteAccount).setOnClickListener(v -> confirmDeleteAccount());
 
         return view;
+    }
+
+    private void confirmDeleteAccount() {
+        new android.app.AlertDialog.Builder(requireContext(), R.style.DarkDialog)
+                .setTitle("注销账号")
+                .setMessage("确定要注销并永久删除该账号吗？此操作不可撤销。")
+                .setPositiveButton("确定注销", (dialog, which) -> deleteAccount())
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void deleteAccount() {
+        UserManager.getInstance(requireContext()).deleteAccount(new UserManager.DeleteAccountCallback() {
+            @Override
+            public void onSuccess() {
+                if (isAdded()) {
+                    requireActivity().runOnUiThread(() -> {
+                        ToastHelper.showShort(getContext(), "账号已注销");
+                        requireActivity().finish();
+                        android.content.Intent intent = new android.content.Intent(requireContext(), LoginActivity.class);
+                        intent.setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                    });
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                if (isAdded()) {
+                    requireActivity().runOnUiThread(() -> {
+                        ToastHelper.showShort(getContext(), "注销失败: " + message);
+                    });
+                }
+            }
+        });
+    }
+
+    private void showAboutDialog() {
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_about, null);
+        TextView tvVersion = dialogView.findViewById(R.id.tvVersion);
+        TextView tvDeveloper = dialogView.findViewById(R.id.tvDeveloper);
+        TextView tvContact = dialogView.findViewById(R.id.tvContact);
+        TextView tvCopyright = dialogView.findViewById(R.id.tvCopyright);
+        View btnConfirm = dialogView.findViewById(R.id.btnConfirm);
+
+        tvVersion.setText(getAppVersionName());
+        tvDeveloper.setText("xqf");
+        tvContact.setText("email@584399.xyz");
+        tvCopyright.setText("Copyright © 2026 xqf.\nAll Rights Reserved.");
+
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setView(dialogView)
+                .create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        btnConfirm.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
+    }
+
+    private void showLogoutDialog() {
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_confirm, null);
+        TextView tvMessage = dialogView.findViewById(R.id.tvMessage);
+        Button btnCancel = dialogView.findViewById(R.id.btnCancel);
+        Button btnConfirm = dialogView.findViewById(R.id.btnConfirm);
+
+        tvMessage.setText("确定要退出登录吗？");
+
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setView(dialogView)
+                .create();
+
+        dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        btnConfirm.setOnClickListener(v -> {
+            UserManager.getInstance(requireContext()).logout();
+            android.content.Intent intent = new android.content.Intent(requireContext(), LoginActivity.class);
+            intent.setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            requireActivity().finish();
+        });
+
+        dialog.show();
+    }
+
+    private void showChangePasswordDialog() {
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_change_password, null);
+        com.google.android.material.textfield.TextInputLayout tilNew = dialogView.findViewById(R.id.tilNewPassword);
+        com.google.android.material.textfield.TextInputLayout tilConfirm = dialogView.findViewById(R.id.tilConfirmPassword);
+        
+        EditText etNewPassword = dialogView.findViewById(R.id.etNewPassword);
+        EditText etConfirmPassword = dialogView.findViewById(R.id.etConfirmPassword);
+        
+        View btnCancel = dialogView.findViewById(R.id.btnCancel);
+        View btnConfirm = dialogView.findViewById(R.id.btnConfirm);
+
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setView(dialogView)
+                .create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        
+        btnConfirm.setOnClickListener(v -> {
+            String newPassword = etNewPassword.getText().toString().trim();
+            String confirmPassword = etConfirmPassword.getText().toString().trim();
+
+            tilNew.setError(null);
+            tilConfirm.setError(null);
+
+            if (newPassword.isEmpty()) {
+                tilNew.setError("请输入新密码");
+                return;
+            }
+
+            if (newPassword.length() < 6) {
+                tilNew.setError("新密码至少6位");
+                return;
+            }
+
+            if (!newPassword.equals(confirmPassword)) {
+                tilConfirm.setError("两次输入的密码不一致");
+                return;
+            }
+
+            changePassword(newPassword);
+            dialog.dismiss();
+        });
+
+        dialog.show();
+    }
+
+
+    private void changePassword(String newPassword) {
+        UserManager.getInstance(requireContext()).changePassword(newPassword, new UserManager.PasswordCallback() {
+            @Override
+            public void onSuccess() {
+                requireActivity().runOnUiThread(() -> {
+                    ToastHelper.showShort(getContext(), "密码修改成功");
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+                requireActivity().runOnUiThread(() -> {
+                    ToastHelper.showShort(getContext(), message);
+                });
+            }
+        });
     }
 
     private String getAppVersionName() {

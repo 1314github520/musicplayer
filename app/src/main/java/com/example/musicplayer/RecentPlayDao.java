@@ -28,4 +28,7 @@ public interface RecentPlayDao {
     
     @Query("DELETE FROM recent_plays WHERE timestamp < :timestamp")
     void deleteOldRecords(long timestamp);
+
+    @Query("DELETE FROM recent_plays")
+    void deleteAll();
 }

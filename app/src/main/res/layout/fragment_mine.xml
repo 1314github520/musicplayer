@@ -5,9 +5,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_dark"
-    android:padding="20dp">
+    android:padding="20dp"
+    android:fitsSystemWindows="true">
 
-    <!-- Profile Header -->
     <androidx.cardview.widget.CardView
         android:id="@+id/profileCard"
         android:layout_width="match_parent"
@@ -22,110 +22,193 @@
             android:layout_height="wrap_content"
             android:padding="20dp">
 
-            <androidx.cardview.widget.CardView
-                android:id="@+id/avatarContainer"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                app:cardCornerRadius="32dp"
-                app:cardElevation="0dp"
+            <Button
+                android:id="@+id/btnLogin"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="登录/注册"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:background="@drawable/button_bg"
+                android:paddingHorizontal="24dp"
+                android:paddingVertical="8dp"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent">
-                <ImageView
-                    android:id="@+id/profileImage"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:scaleType="centerCrop"
-                    android:src="@android:drawable/ic_menu_gallery"
-                    android:contentDescription="@null" />
-            </androidx.cardview.widget.CardView>
+                app:layout_constraintTop_toTopOf="parent" />
 
             <LinearLayout
-                android:id="@+id/userInfo"
-                android:layout_width="0dp"
+                android:id="@+id/userInfoContainer"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
                 android:orientation="vertical"
-                app:layout_constraintBottom_toBottomOf="@id/avatarContainer"
-                app:layout_constraintEnd_toStartOf="@id/btnEdit"
-                app:layout_constraintStart_toEndOf="@id/avatarContainer"
-                app:layout_constraintTop_toTopOf="@id/avatarContainer">
-
-                <TextView
-                    android:id="@+id/nickname"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="音乐爱好者"
-                    android:textColor="@color/white"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                app:layout_constraintTop_toTopOf="parent">
 
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/avatarContainer"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        app:cardCornerRadius="32dp"
+                        app:cardElevation="0dp">
+                        <ImageView
+                            android:id="@+id/profileImage"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop"
+                            android:src="@android:drawable/ic_menu_gallery"
+                            android:contentDescription="@null" />
+                    </androidx.cardview.widget.CardView>
+
+                    <LinearLayout
+                        android:id="@+id/userInfo"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:orientation="vertical"
+                        android:layout_weight="1">
+
+                        <TextView
+                            android:id="@+id/nickname"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="音乐爱好者"
+                            android:textColor="@color/white"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/vipTag"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/vip_tag_bg"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="2dp"
+                                android:text="VIP 2024"
+                                android:textColor="#804000"
+                                android:textSize="10sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/btnEdit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/play_btn_bg"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="4dp"
+                        android:text="@string/edit_profile"
+                        android:textColor="@color/white"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/signature"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/default_signature"
+                    android:textColor="@color/text_grey"
+                    android:textSize="12sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@android:drawable/ic_menu_myplaces"
+                        android:tint="@color/text_grey" />
+
+                    <TextView
+                        android:id="@+id/tvUserId"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="ID: 10001"
+                        android:textColor="@color/text_grey"
+                        android:textSize="11sp" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="12dp"
+                        android:layout_marginHorizontal="8dp"
+                        android:background="@color/text_grey" />
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@android:drawable/ic_menu_info_details"
+                        android:tint="@color/text_grey" />
+
+                    <TextView
+                        android:id="@+id/tvGender"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="男"
+                        android:textColor="@color/text_grey"
+                        android:textSize="11sp" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="12dp"
+                        android:layout_marginHorizontal="8dp"
+                        android:background="@color/text_grey" />
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@android:drawable/ic_menu_my_calendar"
+                        android:tint="@color/text_grey" />
+
+                    <TextView
+                        android:id="@+id/tvBirthday"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="2000-01-01"
+                        android:textColor="@color/text_grey"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/socialStats"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
                     android:orientation="horizontal">
 
                     <TextView
-                        android:id="@+id/vipTag"
+                        android:id="@+id/tvTotalSongs"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/vip_tag_bg"
-                        android:paddingHorizontal="8dp"
-                        android:paddingVertical="2dp"
-                        android:text="VIP 2024"
-                        android:textColor="#804000"
-                        android:textSize="10sp"
-                        android:textStyle="bold" />
+                        android:text="累计听歌 0 首"
+                        android:textColor="@color/text_grey"
+                        android:textSize="12sp" />
                 </LinearLayout>
             </LinearLayout>
-
-            <TextView
-                android:id="@+id/signature"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="@string/default_signature"
-                android:textColor="@color/text_grey"
-                android:textSize="12sp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/avatarContainer" />
-
-            <LinearLayout
-                android:id="@+id/socialStats"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:orientation="horizontal"
-                app:layout_constraintTop_toBottomOf="@id/signature">
-
-                <TextView
-                    android:id="@+id/tvTotalSongs"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="累计听歌 0 首"
-                    android:textColor="@color/text_grey"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/btnEdit"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/play_btn_bg"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="4dp"
-                android:text="@string/edit_profile"
-                android:textColor="@color/white"
-                android:textSize="12sp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@id/avatarContainer" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.cardview.widget.CardView>
 
-    <!-- Function Grid -->
     <GridLayout
         android:id="@+id/functionGrid"
         android:layout_width="match_parent"
@@ -135,7 +218,6 @@
         android:padding="2dp"
         app:layout_constraintTop_toBottomOf="@id/profileCard">
 
-        <!-- Collection -->
         <androidx.cardview.widget.CardView
             android:id="@+id/cardCollection"
             android:layout_width="0dp"
@@ -171,6 +253,7 @@
                     android:layout_height="0dp"
                     android:layout_weight="1" />
                 <TextView
+                    android:id="@+id/tvCollectionCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="0"
@@ -181,8 +264,8 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Recent -->
         <androidx.cardview.widget.CardView
+            android:id="@+id/cardRecent"
             android:layout_width="0dp"
             android:layout_height="120dp"
             android:layout_columnWeight="1"
@@ -216,6 +299,7 @@
                     android:layout_height="0dp"
                     android:layout_weight="1" />
                 <TextView
+                    android:id="@+id/tvRecentCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="50"
@@ -226,8 +310,8 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Local -->
         <androidx.cardview.widget.CardView
+            android:id="@+id/cardDownload"
             android:layout_width="0dp"
             android:layout_height="120dp"
             android:layout_columnWeight="1"
@@ -261,6 +345,7 @@
                     android:layout_height="0dp"
                     android:layout_weight="1" />
                 <TextView
+                    android:id="@+id/tvDownloadCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="32"
@@ -271,7 +356,6 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Cloud -->
         <androidx.cardview.widget.CardView
             android:id="@+id/cardImport"
             android:layout_width="0dp"
@@ -307,6 +391,7 @@
                     android:layout_height="0dp"
                     android:layout_weight="1" />
                 <TextView
+                    android:id="@+id/tvImportCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="0"
@@ -318,7 +403,6 @@
         </androidx.cardview.widget.CardView>
     </GridLayout>
 
-    <!-- Settings Entry -->
     <androidx.cardview.widget.CardView
         android:id="@+id/cardSettings"
         android:layout_width="match_parent"
@@ -353,14 +437,17 @@
                 android:textSize="16sp" />
 
             <ImageView
+                android:id="@+id/ivSettingsMore"
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:src="@android:drawable/ic_menu_more"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
                 app:tint="@color/text_grey" />
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
-    <!-- Assistant with Bubble -->
     <LinearLayout
         android:id="@+id/assistantContainer"
         android:layout_width="wrap_content"

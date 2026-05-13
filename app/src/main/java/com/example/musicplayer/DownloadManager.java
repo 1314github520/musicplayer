@@ -7,6 +7,7 @@ import android.os.Looper;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -16,13 +17,14 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 public class DownloadManager {
-    private static DownloadManager instance;
+    private static volatile DownloadManager instance;
     private final ExecutorService executorService;
     private final OkHttpClient client;
     private final Handler mainHandler;
     private final Context context;
     private final DownloadNotificationManager notificationManager;
     private final AtomicInteger notificationIdGenerator = new AtomicInteger(1000);
+    private final ConcurrentHashMap<Integer, Boolean> downloadingSongs = new ConcurrentHashMap<>();
     
     public interface DownloadCallback {
         void onProgress(int progress);
@@ -41,9 +43,13 @@ public class DownloadManager {
         this.notificationManager = new DownloadNotificationManager(context);
     }
     
-    public static synchronized DownloadManager getInstance(Context context) {
+    public static DownloadManager getInstance(Context context) {
         if (instance == null) {
-            instance = new DownloadManager(context);
+            synchronized (DownloadManager.class) {
+                if (instance == null) {
+                    instance = new DownloadManager(context);
+                }
+            }
         }
         return instance;
     }
@@ -66,6 +72,11 @@ public class DownloadManager {
     }
     
     public void downloadSong(Song song, DownloadCallback callback) {
+        if (downloadingSongs.putIfAbsent(song.id, true) != null) {
+            mainHandler.post(() -> callback.onError("该歌曲正在下载中"));
+            return;
+        }
+        
         int notificationId = notificationIdGenerator.incrementAndGet();
         
         executorService.execute(() -> {
@@ -133,6 +144,8 @@ public class DownloadManager {
                 android.util.Log.e("DownloadManager", "下载异常", e);
                 notificationManager.showDownloadError(song.title, e.getMessage(), notificationId);
                 mainHandler.post(() -> callback.onError("下载失败: " + e.getMessage()));
+            } finally {
+                downloadingSongs.remove(song.id);
             }
         });
     }

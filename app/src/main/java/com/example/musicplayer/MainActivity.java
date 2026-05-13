@@ -3,6 +3,7 @@ package com.example.musicplayer;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.ComponentName;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -46,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private ObjectAnimator diskAnimator;
     private static class ProgressHandler extends android.os.Handler {
         private final java.lang.ref.WeakReference<MainActivity> activityRef;
+        private boolean isRunning = false;
         
         ProgressHandler(MainActivity activity) {
             super(android.os.Looper.getMainLooper());
@@ -53,65 +55,90 @@ public class MainActivity extends AppCompatActivity {
         }
         
         void scheduleUpdate() {
-            postDelayed(new UpdateRunnable(this), 1000);
+            if (!isRunning) {
+                isRunning = true;
+                post(updateRunnable);
+            }
         }
         
         void stopUpdates() {
+            isRunning = false;
             removeCallbacksAndMessages(null);
         }
         
-        private static class UpdateRunnable implements Runnable {
-            private final java.lang.ref.WeakReference<ProgressHandler> handlerRef;
-            
-            UpdateRunnable(ProgressHandler handler) {
-                handlerRef = new java.lang.ref.WeakReference<>(handler);
-            }
-            
+        private final Runnable updateRunnable = new Runnable() {
             @Override
             public void run() {
-                ProgressHandler handler = handlerRef.get();
-                if (handler != null) {
-                    MainActivity activity = handler.activityRef.get();
-                    if (activity != null && !activity.isFinishing()) {
-                        activity.updateProgress();
-                        handler.scheduleUpdate();
-                    }
+                if (!isRunning) return;
+                
+                MainActivity activity = activityRef.get();
+                if (activity != null && !activity.isFinishing()) {
+                    activity.updateProgress();
+                    // 提高更新频率到 200ms 以获得平滑的歌词和进度条效果
+                    postDelayed(this, 200);
+                } else {
+                    isRunning = false;
                 }
             }
-        }
+        };
     }
+
     
     private ProgressHandler progressHandler;
     private java.util.List<LyricEntry> lyricList;
     private android.widget.TextSwitcher lyricSwitcher;
     private View navContent;
-    private LrcLibService lrcLibService = new LrcLibService();
+    private LrcLibService lrcLibService;
     private boolean isInitialPlaylistSetup = true;
     private boolean isUserInitiatedPlay = false;
-    private boolean hasUserPlayedSong = false; // 标记用户是否主动播放过歌曲
-    private java.util.concurrent.ExecutorService executorService;
+    private boolean hasUserPlayedSong = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        UserManager userManager = UserManager.getInstance(this);
+        if (!userManager.isLoggedIn()) {
+            Intent intent = new Intent(this, LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            finish();
+            return;
+        }
+        
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
         
-        executorService = java.util.concurrent.Executors.newFixedThreadPool(4);
+
         progressHandler = new ProgressHandler(this);
+        
+        lrcLibService = new LrcLibService();
+        lrcLibService.init(this);
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
+
+        // 监听登录状态，如果退出登录则清理 ViewModel 中的用户信息
+        UserManager.getInstance(this).getCurrentUser(); // 确保触发一次 load
+        if (!UserManager.getInstance(this).isLoggedIn()) {
+            viewModel.clearProfile();
+        }
+        
+        // 初始同步数据
+        viewModel.syncAllSongs();
+        viewModel.fetchRemoteSongs();
+
         progressBar = findViewById(R.id.playbackProgress);
         importProgressBar = findViewById(R.id.importProgressBar);
         
         // 请求通知权限（Android 13+）
         requestNotificationPermission();
         
-        // 同步所有歌曲到本地数据库（增量更新）
-        viewModel.syncAllSongs();
-        
-        // 检查下载目录并更新本地音乐记录
+        // 检查下载目录并更新本地记录
         checkDownloadedSongs();
+        
+        // 检查应用更新
+        UpdateManager.getInstance(this).checkUpdate(null);
         
         setupLyricSwitcher();
         setupMiniPlayer();
@@ -142,7 +169,7 @@ public class MainActivity extends AppCompatActivity {
     }
     
     private void checkDownloadedSongs() {
-        executorService.execute(() -> {
+        viewModel.executorService.execute(() -> {
             java.io.File musicDir = getExternalFilesDir(android.os.Environment.DIRECTORY_MUSIC);
             if (musicDir == null || !musicDir.exists()) return;
             
@@ -151,23 +178,22 @@ public class MainActivity extends AppCompatActivity {
             
             SongDao songDao = AppDatabase.getInstance(MainActivity.this).songDao();
             
+            List<Song> allSongs = songDao.getAllSongsSync();
+            java.util.Map<String, Song> songMap = new java.util.HashMap<>();
+            for (Song song : allSongs) {
+                songMap.put(sanitizeFileName(song.title), song);
+            }
+            
             for (java.io.File file : files) {
                 if (file.isFile() && file.getName().endsWith(".mp3")) {
-                    // 从文件名获取歌曲标题（去掉.mp3后缀）
                     String fileName = file.getName();
                     String songTitle = fileName.substring(0, fileName.length() - 4);
                     
-                    // 查找数据库中匹配的歌曲
-                    List<Song> allSongs = songDao.getAllSongsSync();
-                    for (Song song : allSongs) {
-                        String sanitizedTitle = sanitizeFileName(song.title);
-                        if (sanitizedTitle.equals(songTitle) && !song.isLocal) {
-                            // 找到匹配的歌曲，更新为本地音乐
-                            song.path = file.getAbsolutePath();
-                            song.isLocal = true;
-                            songDao.updateSong(song);
-                            break;
-                        }
+                    Song song = songMap.get(songTitle);
+                    if (song != null && !song.isLocal) {
+                        song.path = file.getAbsolutePath();
+                        song.isLocal = true;
+                        songDao.updateSong(song);
                     }
                 }
             }
@@ -192,7 +218,7 @@ public class MainActivity extends AppCompatActivity {
             importProgressBar.setProgress(0);
         }
 
-        executorService.execute(() -> {
+        viewModel.executorService.execute(() -> {
             int current = 0;
             for (android.net.Uri uri : uris) {
                 try {
@@ -367,7 +393,7 @@ public class MainActivity extends AppCompatActivity {
             viewModel.setLyrics(new ArrayList<>());
             
             if (songId != -1) {
-                new Thread(() -> {
+                viewModel.executorService.execute(() -> {
                     Song song = AppDatabase.getInstance(MainActivity.this).songDao().getSongById(songId);
                     boolean isLocalImported = isLocalImportedSong(song);
                     runOnUiThread(() -> {
@@ -386,7 +412,7 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
                     });
-                }).start();
+                });
             } else {
                 viewModel.setCurrentLyric("搜索歌词中...");
                 if (lyricSwitcher != null) {
@@ -401,11 +427,137 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean isLocalImportedSong(Song song) {
-        return song != null && song.isLocal && 
-            (song.coverUrl == null || song.coverUrl.isEmpty() || 
-             song.coverUrl.contains("music.png") || 
-             song.coverUrl.startsWith("android.resource://"));
+        if (song == null || !song.isLocal) return false;
+        // 逻辑与 SongDao 同步：非下载目录且非 content:// 协议的通常视为本地导入
+        // 或者简单通过路径判断：下载的音乐通常在 Android/data/ 包名目录下
+        return song.path != null && !song.path.contains(getExternalFilesDir(null).getAbsolutePath());
     }
+
+    /**
+     * 统一加载歌曲元数据（封面、歌手）和歌词
+     * 优先级：1. 内存/传入对象 -> 2. 本地数据库 (by ID 或 lrcId) -> 3. 网络 API
+     */
+    private void loadSongMetadataAndLyrics(Song song) {
+        if (song == null) return;
+        boolean isLocalImported = isLocalImportedSong(song);
+
+        // 1. 立即更新基础 UI (标题、歌手、封面) - 必须在主线程
+        runOnUiThread(() -> {
+            viewModel.setSongTitle(song.title);
+            viewModel.setSongArtist(song.singer != null ? song.singer : song.artist);
+            viewModel.setCurrentSongId(song.id);
+            viewModel.setLyrics(new ArrayList<>());
+            
+            if (isLocalImported) {
+                viewModel.setCoverUrl("android.resource://" + getPackageName() + "/" + R.drawable.music);
+                viewModel.setCurrentLyric("暂无歌词");
+                if (lyricSwitcher != null) lyricSwitcher.setText("暂无歌词");
+            } else {
+                if (song.coverUrl != null && !song.coverUrl.isEmpty()) {
+                    viewModel.setCoverUrl(song.coverUrl);
+                } else {
+                    viewModel.setCoverUrl("android.resource://" + getPackageName() + "/" + R.drawable.music);
+                }
+                viewModel.setCurrentLyric("加载中...");
+                if (lyricSwitcher != null) lyricSwitcher.setText("加载中...");
+            }
+        });
+
+        // 如果是本地导入歌曲，不进行歌词搜索
+        if (isLocalImported) {
+            loadNoLyricsState();
+            return;
+        }
+
+        // 2. 异步处理数据库检索和可能的网络请求
+        viewModel.executorService.execute(() -> {
+            // 刷新歌曲信息，确保拿到最新的 lrcId 和 lyrics 内容
+            Song dbSong = AppDatabase.getInstance(MainActivity.this).songDao().getSongById(song.id);
+            final Song targetSong = (dbSong != null) ? dbSong : song;
+            
+            String cachedLyrics = targetSong.lyrics;
+            
+            // 如果当前记录没歌词，但有 lrcId，尝试从数据库其他记录找找看 (共享歌词)
+            if ((cachedLyrics == null || cachedLyrics.isEmpty()) && targetSong.lrcId != null && targetSong.lrcId > 0) {
+                cachedLyrics = AppDatabase.getInstance(MainActivity.this).songDao().getLyricsByLrcId(targetSong.lrcId);
+            }
+
+            if (cachedLyrics != null && !cachedLyrics.trim().isEmpty()) {
+                final String lyricsToParse = cachedLyrics;
+                runOnUiThread(() -> {
+                    lyricList = LyricUtils.parseLrc(lyricsToParse);
+                    if (!lyricList.isEmpty()) {
+                        viewModel.setLyrics(lyricList);
+                        String firstLine = lyricList.get(0).text;
+                        viewModel.setCurrentLyric(firstLine);
+                        if (lyricSwitcher != null) lyricSwitcher.setText(firstLine);
+                    } else {
+                        // 虽然数据库有内容但解析不出东西，走网络兜底
+                        fetchLyricsFromNetwork(targetSong);
+                    }
+                });
+            } else {
+                // 数据库完全没歌词，走网络
+                runOnUiThread(() -> fetchLyricsFromNetwork(targetSong));
+            }
+        });
+    }
+
+    /**
+     * 从网络获取歌词，并在成功后存入数据库
+     */
+    private void fetchLyricsFromNetwork(Song song) {
+        if (isLocalImportedSong(song)) {
+            runOnUiThread(() -> loadNoLyricsState());
+            return;
+        }
+
+        viewModel.setCurrentLyric("搜索歌词中...");
+        if (lyricSwitcher != null) lyricSwitcher.setText("搜索歌词中...");
+
+        // 获取时长 (必须在主线程调用 mediaController)
+        int durationSeconds = (int) (mediaController != null ? mediaController.getDuration() / 1000 : 0);
+        if (durationSeconds <= 0) durationSeconds = song.duration;
+        final int finalDuration = durationSeconds;
+
+        LrcLibService.LyricsCallback callback = new LrcLibService.LyricsCallback() {
+            @Override
+            public void onSuccess(String lrcContent, Long lrcId) {
+                runOnUiThread(() -> {
+                    // 更新并保存到数据库
+                    viewModel.executorService.execute(() -> {
+                        song.lyrics = lrcContent;
+                        if (lrcId != null) song.lrcId = lrcId;
+                        AppDatabase.getInstance(MainActivity.this).songDao().updateSong(song);
+                    });
+                    
+                    lyricList = LyricUtils.parseLrc(lrcContent);
+                    if (lyricList.isEmpty()) {
+                        loadNoLyricsState();
+                    } else {
+                        viewModel.setLyrics(lyricList);
+                        String firstLine = lyricList.get(0).text;
+                        viewModel.setCurrentLyric(firstLine);
+                        if (lyricSwitcher != null) lyricSwitcher.setText(firstLine);
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+                runOnUiThread(() -> loadNoLyricsState());
+            }
+        };
+
+        if (song.lrcId != null && song.lrcId > 0) {
+            lrcLibService.fetchLyricsById(song.lrcId, callback);
+        } else {
+            String searchTitle = song.title.replaceAll("(?i)\\.mp3|\\.flac|\\.wav", "")
+                    .replaceAll("\\(.*?\\)|\\[.*?\\]", "").trim();
+            lrcLibService.fetchLyrics(searchTitle, song.artist, song.album, Math.max(0, finalDuration), callback);
+        }
+    }
+
 
     public void pauseMusic() {
         if (mediaController != null && mediaController.isPlaying()) {
@@ -425,9 +577,6 @@ public class MainActivity extends AppCompatActivity {
         if (DownloadManager.getInstance(this) != null) {
             DownloadManager.getInstance(this).shutdown();
         }
-        if (executorService != null && !executorService.isShutdown()) {
-            executorService.shutdownNow();
-        }
         android.util.Log.d("MainActivity", "所有后台任务已暂停");
     }
     
@@ -435,43 +584,14 @@ public class MainActivity extends AppCompatActivity {
         if (viewModel != null) {
             viewModel.restartExecutorService();
         }
-        if (executorService == null || executorService.isShutdown()) {
-            executorService = java.util.concurrent.Executors.newFixedThreadPool(4);
-        }
         android.util.Log.d("MainActivity", "后台任务已恢复");
     }
 
     public void playSongList(List<Song> songs, int position) {
         if (mediaController == null || songs == null || songs.isEmpty()) return;
 
-        // 标记用户主动播放歌曲
         hasUserPlayedSong = true;
-
-        // 判断目标歌曲是否是本地导入音乐
         Song targetSong = songs.get(position);
-        boolean isLocalImported = isLocalImportedSong(targetSong);
-        
-        // 立即清空歌词
-        viewModel.setLyrics(new ArrayList<>());
-        if (isLocalImported) {
-            // 本地导入音乐：显示music.png封面和暂无歌词
-            viewModel.setCoverUrl("android.resource://" + getPackageName() + "/" + R.drawable.music);
-            viewModel.setCurrentLyric("暂无歌词");
-            if (lyricSwitcher != null) {
-                lyricSwitcher.setText("暂无歌词");
-            }
-        } else {
-            // 在线音乐或下载的音乐：显示原有封面
-            if (targetSong.coverUrl != null && !targetSong.coverUrl.isEmpty()) {
-                viewModel.setCoverUrl(targetSong.coverUrl);
-            } else {
-                viewModel.setCoverUrl("android.resource://" + getPackageName() + "/" + R.drawable.music);
-            }
-            viewModel.setCurrentLyric("搜索歌词中...");
-            if (lyricSwitcher != null) {
-                lyricSwitcher.setText("搜索歌词中...");
-            }
-        }
 
         mediaController.stop();
         mediaController.clearMediaItems();
@@ -482,86 +602,16 @@ public class MainActivity extends AppCompatActivity {
         mediaController.seekTo(position, 0);
         mediaController.play();
 
-        if (position < songs.size()) {
-            viewModel.setCurrentSongId(songs.get(position).id);
-        }
+        loadSongMetadataAndLyrics(targetSong);
+        viewModel.addToRecent(targetSong.id);
         showPlayerFragment();
-        
-        // 设置歌曲信息（显示歌手）
-        viewModel.setSongTitle(targetSong.title);
-        viewModel.setSongArtist(targetSong.singer != null ? targetSong.singer : targetSong.artist);
-        
-        // 如果是在线音乐，搜索歌词（使用artist作曲家字段）
-        if (!isLocalImported && targetSong != null) {
-            String searchArtist = targetSong.artist != null ? targetSong.artist : "Unknown";
-            String searchTitle = targetSong.title.replaceAll("(?i)\\.mp3|\\.flac|\\.wav", "")
-                                                .replaceAll("\\(.*?\\)|\\[.*?\\]", "").trim();
-            
-            int durationSeconds = targetSong.duration;
-            if (durationSeconds < 0) durationSeconds = 0;
-            
-            lrcLibService.fetchLyrics(searchTitle, searchArtist, targetSong.album, durationSeconds, new LrcLibService.LyricsCallback() {
-                @Override
-                public void onSuccess(String lrcContent, Integer lrcId) {
-                    runOnUiThread(() -> {
-                        // 如果获取到了lrc_id，保存到数据库
-                        if (lrcId != null && lrcId > 0 && targetSong.lrcId == null) {
-                            new Thread(() -> {
-                                targetSong.lrcId = lrcId;
-                                AppDatabase.getInstance(MainActivity.this).songDao().updateSong(targetSong);
-                                android.util.Log.d("MainActivity", "保存lrc_id到数据库: " + lrcId);
-                            }).start();
-                        }
-                        
-                        lyricList = LyricUtils.parseLrc(lrcContent);
-                        if (lyricList.isEmpty()) {
-                            loadNoLyricsState();
-                        } else {
-                            viewModel.setLyrics(lyricList);
-                            if (!lyricList.isEmpty()) {
-                                String firstLine = lyricList.get(0).text;
-                                viewModel.setCurrentLyric(firstLine);
-                                if (lyricSwitcher != null) {
-                                    lyricSwitcher.setText(firstLine);
-                                }
-                            }
-                        }
-                    });
-                }
-
-                @Override
-                public void onError(String message) {
-                    runOnUiThread(() -> loadNoLyricsState());
-                }
-            });
-        }
     }
 
+
     public void playSong(Song song) {
-        if (mediaController == null) return;
+        if (mediaController == null || song == null) return;
 
-        // 标记用户主动播放歌曲
         hasUserPlayedSong = true;
-
-        // 判断是否是本地导入音乐
-        boolean isLocalImported = isLocalImportedSong(song);
-        
-        // 立即清空歌词
-        viewModel.setLyrics(new ArrayList<>());
-        if (isLocalImported) {
-            // 本地导入音乐：显示music.png封面和暂无歌词
-            viewModel.setCoverUrl("android.resource://" + getPackageName() + "/" + R.drawable.music);
-            viewModel.setCurrentLyric("暂无歌词");
-            if (lyricSwitcher != null) {
-                lyricSwitcher.setText("暂无歌词");
-            }
-        } else {
-            // 在线音乐：显示搜索歌词中
-            viewModel.setCurrentLyric("搜索歌词中...");
-            if (lyricSwitcher != null) {
-                lyricSwitcher.setText("搜索歌词中...");
-            }
-        }
 
         int existingIndex = -1;
         for (int i = 0; i < mediaController.getMediaItemCount(); i++) {
@@ -582,58 +632,11 @@ public class MainActivity extends AppCompatActivity {
         }
         
         mediaController.play();
-        viewModel.setCurrentSongId(song.id);
+        loadSongMetadataAndLyrics(song);
+        viewModel.addToRecent(song.id);
         showPlayerFragment();
-        
-        // 设置歌曲信息（显示歌手）
-        viewModel.setSongTitle(song.title);
-        viewModel.setSongArtist(song.singer != null ? song.singer : song.artist);
-        
-        // 如果是在线音乐，搜索歌词（使用artist作曲家字段）
-        if (!isLocalImported) {
-            String searchArtist = song.artist != null ? song.artist : "Unknown";
-            String searchTitle = song.title.replaceAll("(?i)\\.mp3|\\.flac|\\.wav", "")
-                                           .replaceAll("\\(.*?\\)|\\[.*?\\]", "").trim();
-            
-            int durationSeconds = song.duration;
-            if (durationSeconds < 0) durationSeconds = 0;
-            
-            lrcLibService.fetchLyrics(searchTitle, searchArtist, song.album, durationSeconds, new LrcLibService.LyricsCallback() {
-                @Override
-                public void onSuccess(String lrcContent, Integer lrcId) {
-                    runOnUiThread(() -> {
-                        // 如果获取到了lrc_id，保存到数据库
-                        if (lrcId != null && lrcId > 0 && song.lrcId == null) {
-                            new Thread(() -> {
-                                song.lrcId = lrcId;
-                                AppDatabase.getInstance(MainActivity.this).songDao().updateSong(song);
-                                android.util.Log.d("MainActivity", "保存lrc_id到数据库: " + lrcId);
-                            }).start();
-                        }
-                        
-                        lyricList = LyricUtils.parseLrc(lrcContent);
-                        if (lyricList.isEmpty()) {
-                            loadNoLyricsState();
-                        } else {
-                            viewModel.setLyrics(lyricList);
-                            if (!lyricList.isEmpty()) {
-                                String firstLine = lyricList.get(0).text;
-                                viewModel.setCurrentLyric(firstLine);
-                                if (lyricSwitcher != null) {
-                                    lyricSwitcher.setText(firstLine);
-                                }
-                            }
-                        }
-                    });
-                }
-
-                @Override
-                public void onError(String message) {
-                    runOnUiThread(() -> loadNoLyricsState());
-                }
-            });
-        }
     }
+
 
     private MediaItem createMediaItemFromSong(Song song) {
         String path = song.path;
@@ -664,99 +667,24 @@ public class MainActivity extends AppCompatActivity {
     private void playFirstSongAndShowInfo() {
         if (mediaController == null || mediaController.getMediaItemCount() == 0) return;
         
-        // 获取第一首歌
         MediaItem firstItem = mediaController.getMediaItemAt(0);
         int songId = mediaIdFromItem(firstItem);
         
-        // 清空歌词
-        viewModel.setLyrics(new ArrayList<>());
-        viewModel.setCurrentLyric("搜索歌词中...");
-        if (lyricSwitcher != null) {
-            lyricSwitcher.setText("搜索歌词中...");
-        }
-        
-        // 从数据库获取歌曲信息
         if (songId != -1) {
-            new Thread(() -> {
+            viewModel.executorService.execute(() -> {
                 Song song = AppDatabase.getInstance(MainActivity.this).songDao().getSongById(songId);
                 if (song != null) {
-                    boolean isLocalImported = isLocalImportedSong(song);
-                    runOnUiThread(() -> {
-                        // 设置歌曲信息
-                        viewModel.setSongTitle(song.title);
-                        viewModel.setSongArtist(song.singer != null ? song.singer : song.artist);
-                        viewModel.setCurrentSongId(song.id);
-                        
-                        if (isLocalImported) {
-                            // 本地导入音乐
-                            viewModel.setCoverUrl("android.resource://" + getPackageName() + "/" + R.drawable.music);
-                            viewModel.setCurrentLyric("暂无歌词");
-                            if (lyricSwitcher != null) {
-                                lyricSwitcher.setText("暂无歌词");
-                            }
-                        } else {
-                            // 在线音乐
-                            if (song.coverUrl != null && !song.coverUrl.isEmpty()) {
-                                viewModel.setCoverUrl(song.coverUrl);
-                            }
-                            
-                            // 搜索歌词
-                            String searchArtist = song.artist != null ? song.artist : "Unknown";
-                            String searchTitle = song.title.replaceAll("(?i)\\.mp3|\\.flac|\\.wav", "")
-                                                           .replaceAll("\\(.*?\\)|\\[.*?\\]", "").trim();
-                            int durationSeconds = song.duration;
-                            if (durationSeconds < 0) durationSeconds = 0;
-                            
-                            lrcLibService.fetchLyrics(searchTitle, searchArtist, song.album, durationSeconds, new LrcLibService.LyricsCallback() {
-                                @Override
-                                public void onSuccess(String lrcContent, Integer lrcId) {
-                                    runOnUiThread(() -> {
-                                        if (lrcId != null && lrcId > 0 && song.lrcId == null) {
-                                            new Thread(() -> {
-                                                song.lrcId = lrcId;
-                                                AppDatabase.getInstance(MainActivity.this).songDao().updateSong(song);
-                                            }).start();
-                                        }
-                                        
-                                        lyricList = LyricUtils.parseLrc(lrcContent);
-                                        if (lyricList.isEmpty()) {
-                                            loadNoLyricsState();
-                                        } else {
-                                            viewModel.setLyrics(lyricList);
-                                            if (!lyricList.isEmpty()) {
-                                                String firstLine = lyricList.get(0).text;
-                                                viewModel.setCurrentLyric(firstLine);
-                                                if (lyricSwitcher != null) {
-                                                    lyricSwitcher.setText(firstLine);
-                                                }
-                                            }
-                                        }
-                                    });
-                                }
-
-                                @Override
-                                public void onError(String message) {
-                                    runOnUiThread(() -> loadNoLyricsState());
-                                }
-                            });
-                        }
-                    });
+                    loadSongMetadataAndLyrics(song);
+                    viewModel.addToRecent(songId);
                 }
-            }).start();
+            });
         }
         
-        // 开始播放
         mediaController.seekTo(0, 0);
         mediaController.play();
-        
-        // 添加到最近播放
-        if (songId != -1) {
-            viewModel.addToRecent(songId);
-        }
-        
-        // 显示播放页面
         showPlayerFragment();
     }
+
 
     private void switchFragment(Fragment fragment, String tag) {
         getSupportFragmentManager().beginTransaction()
@@ -783,17 +711,16 @@ public class MainActivity extends AppCompatActivity {
         if (mediaController != null) {
             // Observe remote songs for the default playlist (Discovery/Recommended)
             viewModel.getRemoteSongs().observe(this, songs -> {
-                if (mediaController != null && songs != null && !songs.isEmpty() && mediaController.getMediaItemCount() == 0) {
-                    List<MediaItem> items = new ArrayList<>();
-                    for (Song song : songs) {
-                        items.add(createMediaItemFromSong(song));
+                if (mediaController != null && songs != null && !songs.isEmpty()) {
+                    // 仅在当前播放列表为空时设置初始播放列表
+                    if (mediaController.getMediaItemCount() == 0) {
+                        List<MediaItem> items = new ArrayList<>();
+                        for (Song song : songs) {
+                            items.add(createMediaItemFromSong(song));
+                        }
+                        mediaController.setMediaItems(items);
+                        mediaController.prepare();
                     }
-                    mediaController.setMediaItems(items);
-                    mediaController.prepare();
-                    // Do NOT call mediaController.play() here to satisfy "don't play" requirement
-                    
-                    // 软件启动时不选中任何歌曲，不显示歌曲信息
-                    // 用户点击歌曲后才会显示
                 }
             });
 
@@ -839,6 +766,8 @@ public class MainActivity extends AppCompatActivity {
                         // 用户通过 playSongList/playSong/playSongAt 切换歌曲时，会触发 PLAYLIST_CHANGED
                         // 此时歌词已经在那些方法中设置好了，不需要再处理
                         if (isPlaylistChange) {
+                            // 虽然不在这里处理歌词，但如果是用户主动切换，确保 currentSongId 被更新
+                            updateCurrentSongIdFromController();
                             return;
                         }
                         
@@ -847,143 +776,29 @@ public class MainActivity extends AppCompatActivity {
                             return;
                         }
                         
-                        // 只有自动播放下一首（reason=AUTO）或用户通过其他方式切换歌曲（reason=SEEK）时才处理歌词
-                        // 检查是否是本地音乐
                         int songId = mediaIdFromItem(mediaItem);
-                        
                         if (songId != -1) {
-                            new Thread(() -> {
+                            viewModel.executorService.execute(() -> {
                                 Song song = AppDatabase.getInstance(MainActivity.this).songDao().getSongById(songId);
-                                boolean isLocalImported = isLocalImportedSong(song);
-                                
-                                if (isLocalImported) {
-                                    runOnUiThread(() -> {
-                                        // 本地导入音乐：显示暂无歌词，不搜索歌词
-                                        viewModel.setSongTitle(song.title);
-                                        viewModel.setSongArtist(song.singer != null ? song.singer : "未知歌手");
-                                        
-                                        // 保持封面显示为music.png
-                                        viewModel.setCoverUrl("android.resource://" + getPackageName() + "/" + R.drawable.music);
-                                        
-                                        // 显示暂无歌词
-                                        viewModel.setLyrics(new ArrayList<>());
-                                        viewModel.setCurrentLyric("暂无歌词");
-                                        if (lyricSwitcher != null) {
-                                            lyricSwitcher.setText("暂无歌词");
-                                        }
-                                    });
-                                } else {
-                                    // 在线音乐：搜索歌词
-                                    runOnUiThread(() -> {
-                                        // 显示歌手
-                                        viewModel.setSongTitle(song.title);
-                                        viewModel.setSongArtist(song.singer != null ? song.singer : song.artist);
-                                        
-                                        if (mediaItem.mediaMetadata.artworkUri != null) {
-                                            viewModel.setCoverUrl(mediaItem.mediaMetadata.artworkUri.toString());
-                                        }
-                                        
-                                        // 显示搜索歌词中
-                                        viewModel.setLyrics(new ArrayList<>());
-                                        viewModel.setCurrentLyric("搜索歌词中...");
-                                        if (lyricSwitcher != null) {
-                                            lyricSwitcher.setText("搜索歌词中...");
-                                        }
-                                        
-                                        // 获取时长并搜索歌词
-                                        int durationSeconds = (int) (mediaController.getDuration() / 1000);
-                                        if (durationSeconds <= 0 && song != null) {
-                                            durationSeconds = song.duration;
-                                        }
-                                        if (durationSeconds < 0) durationSeconds = 0;
-                                        
-                                        // 优先使用lrc_id获取歌词
-                                        if (song.lrcId != null && song.lrcId > 0) {
-                                            android.util.Log.d("MainActivity", "使用lrc_id获取歌词: " + song.lrcId);
-                                            lrcLibService.fetchLyricsById(song.lrcId, new LrcLibService.LyricsCallback() {
-                                                @Override
-                                                public void onSuccess(String lrcContent, Integer lrcId) {
-                                                    runOnUiThread(() -> {
-                                                        lyricList = LyricUtils.parseLrc(lrcContent);
-                                                        if (lyricList.isEmpty()) {
-                                                            loadNoLyricsState();
-                                                        } else {
-                                                            viewModel.setLyrics(lyricList);
-                                                            if (!lyricList.isEmpty()) {
-                                                                String firstLine = lyricList.get(0).text;
-                                                                viewModel.setCurrentLyric(firstLine);
-                                                                if (lyricSwitcher != null) {
-                                                                    lyricSwitcher.setText(firstLine);
-                                                                }
-                                                            }
-                                                        }
-                                                    });
-                                                }
-
-                                                @Override
-                                                public void onError(String message) {
-                                                    runOnUiThread(() -> loadNoLyricsState());
-                                                }
-                                            });
-                                        } else {
-                                            // 没有lrc_id，使用传统搜索方式
-                                            android.util.Log.d("MainActivity", "使用传统方式搜索歌词");
-                                            String searchArtist = song.artist != null ? song.artist : "Unknown";
-                                            String searchTitle = song.title.replaceAll("(?i)\\.mp3|\\.flac|\\.wav", "")
-                                                                           .replaceAll("\\(.*?\\)|\\[.*?\\]", "").trim();
-
-                                            lrcLibService.fetchLyrics(searchTitle, searchArtist, album, durationSeconds, new LrcLibService.LyricsCallback() {
-                                                @Override
-                                                public void onSuccess(String lrcContent, Integer lrcId) {
-                                                    runOnUiThread(() -> {
-                                                        // 如果获取到了lrc_id，保存到数据库
-                                                        if (lrcId != null && lrcId > 0 && song.lrcId == null) {
-                                                            new Thread(() -> {
-                                                                song.lrcId = lrcId;
-                                                                AppDatabase.getInstance(MainActivity.this).songDao().updateSong(song);
-                                                                android.util.Log.d("MainActivity", "保存lrc_id到数据库: " + lrcId);
-                                                            }).start();
-                                                        }
-                                                        
-                                                        lyricList = LyricUtils.parseLrc(lrcContent);
-                                                        if (lyricList.isEmpty()) {
-                                                            loadNoLyricsState();
-                                                        } else {
-                                                            viewModel.setLyrics(lyricList);
-                                                            if (!lyricList.isEmpty()) {
-                                                                String firstLine = lyricList.get(0).text;
-                                                                viewModel.setCurrentLyric(firstLine);
-                                                                if (lyricSwitcher != null) {
-                                                                    lyricSwitcher.setText(firstLine);
-                                                                }
-                                                            }
-                                                        }
-                                                    });
-                                                }
-
-                                                @Override
-                                                public void onError(String message) {
-                                                    runOnUiThread(() -> loadNoLyricsState());
-                                                }
-                                            });
-                                        }
-                                    });
+                                if (song != null) {
+                                    loadSongMetadataAndLyrics(song);
+                                    viewModel.addToRecent(songId);
                                 }
-                            }).start();
-                        }
-                        
-                        // 只有用户主动播放过歌曲后，才添加到最近播放
-                        if (songId != -1 && hasUserPlayedSong) {
-                            viewModel.setCurrentSongId(songId);
-                            viewModel.addToRecent(songId);
+                            });
                         }
                     }
                 }
+
 
                 @Override
                 public void onIsPlayingChanged(boolean isPlaying) {
                     viewModel.setIsPlaying(isPlaying);
                     updateRotation(isPlaying);
+                    if (isPlaying) {
+                        progressHandler.scheduleUpdate();
+                    } else {
+                        progressHandler.stopUpdates();
+                    }
                 }
             });
 
@@ -1013,7 +828,7 @@ public class MainActivity extends AppCompatActivity {
             });
 
             viewModel.getNextRequest().observe(this, request -> {
-                if (mediaController != null && request > 0) {
+                if (mediaController != null && Boolean.TRUE.equals(request)) {
                     if (mediaController.getMediaItemCount() > 0 && 
                         mediaController.getCurrentMediaItemIndex() == mediaController.getMediaItemCount() - 1) {
                         mediaController.seekTo(0, 0);
@@ -1024,7 +839,7 @@ public class MainActivity extends AppCompatActivity {
             });
 
             viewModel.getPrevRequest().observe(this, request -> {
-                if (mediaController != null && request > 0) {
+                if (mediaController != null && Boolean.TRUE.equals(request)) {
                     if (mediaController.getMediaItemCount() > 0 && 
                         mediaController.getCurrentMediaItemIndex() == 0) {
                         mediaController.seekTo(mediaController.getMediaItemCount() - 1, 0);
@@ -1151,7 +966,6 @@ public class MainActivity extends AppCompatActivity {
         ImageRequest request = new ImageRequest.Builder(this)
                 .data(url)
                 .crossfade(true)
-                .allowHardware(false)
                 .target(rotatingDisk)
                 .build();
         Coil.imageLoader(this).enqueue(request);
@@ -1166,6 +980,8 @@ public class MainActivity extends AppCompatActivity {
         if (lyricSwitcher != null) {
             lyricSwitcher.setText("暂无歌词");
         }
+        // 重置播放位置相关的歌词更新标记
+        viewModel.setCurrentPosition(0);
     }
 
     private void loadLyrics() {
@@ -1210,23 +1026,37 @@ public class MainActivity extends AppCompatActivity {
     private void updateLyricSync(long currentPosition) {
         if (lyricList == null || lyricList.isEmpty()) return;
 
-        String currentLine = "";
-        for (int i = 0; i < lyricList.size(); i++) {
-            if (currentPosition >= lyricList.get(i).time) {
-                if (i == lyricList.size() - 1 || currentPosition < lyricList.get(i + 1).time) {
-                    currentLine = lyricList.get(i).text;
-                    break;
-                }
+        // 使用二分查找算法优化歌词匹配性能
+        int low = 0;
+        int high = lyricList.size() - 1;
+        int index = -1;
+
+        while (low <= high) {
+            int mid = (low + high) / 2;
+            if (lyricList.get(mid).time <= currentPosition) {
+                index = mid;
+                low = mid + 1;
+            } else {
+                high = mid - 1;
             }
         }
+
+        String currentLine = "";
+        if (index != -1) {
+            currentLine = lyricList.get(index).text;
+        } else {
+            // 如果在第一句歌词之前，显示歌曲标题
+            currentLine = viewModel.getSongTitle().getValue();
+        }
         
-        if (!currentLine.equals(viewModel.getCurrentLyric().getValue())) {
+        if (currentLine != null && !currentLine.equals(viewModel.getCurrentLyric().getValue())) {
             viewModel.setCurrentLyric(currentLine);
             if (lyricSwitcher != null) {
                 lyricSwitcher.setText(currentLine);
             }
         }
     }
+
 
     private void setupRotatingDisk() {
         rotatingDisk = findViewById(R.id.rotatingDisk);
@@ -1271,22 +1101,30 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
+        if (progressHandler != null) {
+            progressHandler.stopUpdates();
+            progressHandler.removeCallbacksAndMessages(null);
+            progressHandler = null;
+        }
+        
+        if (lrcLibService != null) {
+            lrcLibService.cancelAll();
+        }
+        
+        ToastHelper.cancelAll();
+
         if (controllerFuture != null) {
             MediaController.releaseFuture(controllerFuture);
             mediaController = null;
+            controllerFuture = null;
         }
-        if (progressHandler != null) {
-            progressHandler.stopUpdates();
+
+        if (diskAnimator != null) {
+            diskAnimator.cancel();
+            diskAnimator = null;
         }
-        if (executorService != null && !executorService.isShutdown()) {
-            executorService.shutdown();
-        }
-        // 注意：不在这里关闭 DownloadManager，让下载任务能够继续执行
-        // DownloadManager 是单例模式，会在应用退出时自动清理
-        // 清理LrcLibService
-        lrcLibService.cancelAll();
-        // 清理ToastHelper
-        ToastHelper.cancelAll();
+
+        super.onDestroy();
     }
 }
+

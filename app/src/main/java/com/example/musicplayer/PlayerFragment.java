@@ -371,7 +371,7 @@ public class PlayerFragment extends Fragment {
         viewModel.getCoverUrl().observe(getViewLifecycleOwner(), this::loadCover);
 
         viewModel.getLoopMode().observe(getViewLifecycleOwner(), mode -> {
-            // 0: List Loop (Order), 1: Single Loop (Cycle)
+            // 0: List Loop, 1: Single Loop
             if (mode == 1) {
                 btnLoopMode.setImageResource(R.drawable.cycle);
             } else {
@@ -444,6 +444,7 @@ public class PlayerFragment extends Fragment {
     private void loadCover(String url) {
         ImageRequest request = new ImageRequest.Builder(requireContext())
                 .data(url)
+                .allowHardware(false)
                 .crossfade(true)
                 .target(new coil.target.Target() {
                     @Override

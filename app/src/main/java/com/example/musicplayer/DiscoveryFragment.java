@@ -63,14 +63,14 @@ public class DiscoveryFragment extends Fragment {
                     int songId = result.getData().getIntExtra("song_id", -1);
                     if (songId != -1 && getActivity() instanceof MainActivity) {
                         // 从数据库获取歌曲并播放
-                        new Thread(() -> {
+                        viewModel.executorService.execute(() -> {
                             Song song = AppDatabase.getInstance(requireContext()).songDao().getSongById(songId);
                             if (song != null) {
                                 getActivity().runOnUiThread(() -> {
                                     ((MainActivity) getActivity()).playSong(song);
                                 });
                             }
-                        }).start();
+                        });
                     }
                 }
             }
@@ -102,7 +102,9 @@ public class DiscoveryFragment extends Fragment {
         // Observe remote songs for the main discovery content
         viewModel.getRemoteSongs().observe(getViewLifecycleOwner(), songs -> {
             if (songs != null && !songs.isEmpty()) {
-                updateDiscoveryContent(songs);
+                if (isAdded()) { // 检查 Fragment 是否已添加
+                    updateDiscoveryContent(songs);
+                }
             }
         });
 
@@ -166,7 +168,11 @@ public class DiscoveryFragment extends Fragment {
     }
 
     private void updateDiscoveryContent(List<Song> songs) {
-        if (songs == null || songs.isEmpty()) return;
+        if (songs == null || songs.isEmpty()) {
+            android.util.Log.d("DiscoveryFragment", "收到的歌曲列表为空");
+            return;
+        }
+        android.util.Log.d("DiscoveryFragment", "开始刷新 UI，歌曲数量: " + songs.size());
         
         ImageLoader imageLoader = Coil.imageLoader(requireContext());
         if (recommendedAdapter != null) {
@@ -182,8 +188,10 @@ public class DiscoveryFragment extends Fragment {
                 final Song song = (i < songs.size()) ? songs.get(i) : null;
                 String url = (song != null) ? song.coverUrl : null;
                 
+                android.util.Log.d("DiscoveryFragment", "加载图片 URL [" + i + "]: " + url);
+                
                 imageLoader.enqueue(new ImageRequest.Builder(requireContext())
-                        .data(url != null ? url : R.drawable.music)
+                        .data(url != null && !url.isEmpty() ? url : R.drawable.music)
                         .target(songViews[i])
                         .error(R.drawable.music)
                         .placeholder(R.drawable.music)
@@ -194,23 +202,23 @@ public class DiscoveryFragment extends Fragment {
                     if (nameViews[i] != null) nameViews[i].setText(song.title);
                     if (artistViews[i] != null) artistViews[i].setText(song.artist);
                     
-                    // Add click listener to each new song item
-                    View parent = (View) songViews[i].getParent().getParent();
-                    parent.setOnClickListener(v -> {
-                        if (songs != null && song != null) {
-                            int index = songs.indexOf(song);
-                            if (index >= 0 && index < songs.size()) {
-                                ((MainActivity) requireActivity()).playSongList(songs, index);
-                            } else {
-                                ((MainActivity) requireActivity()).playSong(song);
-                            }
+                    // 获取父容器并设置点击监听
+                    try {
+                        View parentContainer = (View) songViews[i].getParent();
+                        if (parentContainer != null) {
+                            parentContainer.setOnClickListener(v -> {
+                                int index = songs.indexOf(song);
+                                if (index >= 0) {
+                                    ((MainActivity) requireActivity()).playSongList(songs, index);
+                                }
+                            });
                         }
-                    });
+                    } catch (Exception e) {
+                        android.util.Log.e("DiscoveryFragment", "设置点击监听失败", e);
+                    }
                 }
             }
         }
-
-
     }
 
     private void updateHeroCard(String title, String coverUrl) {
