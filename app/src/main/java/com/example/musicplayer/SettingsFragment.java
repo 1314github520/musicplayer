@@ -20,6 +20,7 @@ public class SettingsFragment extends Fragment {
 
     private ProgressBar progressBar;
     private TextView tvCurrentVersion;
+    private TextView tvCurrentTheme;
     private androidx.appcompat.app.AlertDialog downloadDialog;
     private androidx.appcompat.app.AlertDialog updateDialog;
     private ProgressBar downloadProgressBar;
@@ -34,11 +35,14 @@ public class SettingsFragment extends Fragment {
 
         progressBar = view.findViewById(R.id.progressBar);
         tvCurrentVersion = view.findViewById(R.id.tvCurrentVersion);
+        tvCurrentTheme = view.findViewById(R.id.tvCurrentTheme);
 
         view.findViewById(R.id.btnBack).setOnClickListener(v -> requireActivity().onBackPressed());
 
         tvCurrentVersion.setText("当前版本: " + getAppVersionName());
+        updateThemeSummary();
 
+        view.findViewById(R.id.layoutTheme).setOnClickListener(v -> showThemeChooser());
         view.findViewById(R.id.layoutCheckUpdate).setOnClickListener(v -> checkForUpdate());
         view.findViewById(R.id.layoutChangePassword).setOnClickListener(v -> showChangePasswordDialog());
         view.findViewById(R.id.layoutAbout).setOnClickListener(v -> showAboutDialog());
@@ -48,13 +52,58 @@ public class SettingsFragment extends Fragment {
         return view;
     }
 
-    private void confirmDeleteAccount() {
-        new android.app.AlertDialog.Builder(requireContext(), R.style.DarkDialog)
-                .setTitle("注销账号")
-                .setMessage("确定要注销并永久删除该账号吗？此操作不可撤销。")
-                .setPositiveButton("确定注销", (dialog, which) -> deleteAccount())
+    private void showThemeChooser() {
+        String[] themes = {"浅色模式", "深色模式", "跟随系统"};
+        int currentMode = ThemeManager.getInstance(requireContext()).getThemeMode();
+        int selection = 2; // Default to System
+        if (currentMode == ThemeManager.THEME_LIGHT) selection = 0;
+        else if (currentMode == ThemeManager.THEME_DARK) selection = 1;
+
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.DarkDialog)
+                .setTitle("选择主题模式")
+                .setSingleChoiceItems(themes, selection, (dialog, which) -> {
+                    int mode;
+                    if (which == 0) mode = ThemeManager.THEME_LIGHT;
+                    else if (which == 1) mode = ThemeManager.THEME_DARK;
+                    else mode = ThemeManager.THEME_SYSTEM;
+
+                    ThemeManager.getInstance(requireContext()).setThemeMode(mode);
+                    updateThemeSummary();
+                    dialog.dismiss();
+                    // 重启 Activity 以应用主题
+                    requireActivity().recreate();
+                })
                 .setNegativeButton("取消", null)
                 .show();
+    }
+
+    private void updateThemeSummary() {
+        if (tvCurrentTheme != null) {
+            tvCurrentTheme.setText(ThemeManager.getInstance(requireContext()).getThemeName(requireContext()));
+        }
+    }
+
+    private void confirmDeleteAccount() {
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_confirm, null);
+        TextView tvMessage = dialogView.findViewById(R.id.tvMessage);
+        Button btnCancel = dialogView.findViewById(R.id.btnCancel);
+        Button btnConfirm = dialogView.findViewById(R.id.btnConfirm);
+
+        tvMessage.setText("确定要注销并永久删除该账号吗？此操作不可撤销。");
+
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setView(dialogView)
+                .create();
+
+        dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        btnConfirm.setOnClickListener(v -> {
+            dialog.dismiss();
+            deleteAccount();
+        });
+
+        dialog.show();
     }
 
     private void deleteAccount() {
@@ -124,6 +173,9 @@ public class SettingsFragment extends Fragment {
 
         btnCancel.setOnClickListener(v -> dialog.dismiss());
         btnConfirm.setOnClickListener(v -> {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).pauseAllBackgroundTasks();
+            }
             UserManager.getInstance(requireContext()).logout();
             android.content.Intent intent = new android.content.Intent(requireContext(), LoginActivity.class);
             intent.setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);

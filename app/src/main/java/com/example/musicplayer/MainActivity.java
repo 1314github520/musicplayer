@@ -92,10 +92,14 @@ public class MainActivity extends AppCompatActivity {
     private boolean isInitialPlaylistSetup = true;
     private boolean isUserInitiatedPlay = false;
     private boolean hasUserPlayedSong = false;
+    
+    // 防止内存泄漏：保存BackStackChangedListener的引用以便后续移除
+    private androidx.fragment.app.FragmentManager.OnBackStackChangedListener backStackChangeListener;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        ThemeManager.getInstance(this).applyTheme();
         super.onCreate(savedInstanceState);
         
         UserManager userManager = UserManager.getInstance(this);
@@ -290,14 +294,13 @@ public class MainActivity extends AppCompatActivity {
                             // 已存在（下载的音乐），更新为本地导入
                             existingSong.path = uri.toString();
                             existingSong.isLocal = true;
-                            existingSong.coverUrl = "android.resource://" + getPackageName() + "/" + R.drawable.music;
+                            existingSong.coverUrl = null; // 本地音乐不设置封面URL，使用默认图标
                             existingSong.album = album != null ? album : "Unknown Album";
                             existingSong.duration = duration;
                             viewModel.updateSong(existingSong);
                         } else {
-                            // 新歌曲，插入，封面显示为music.png
-                            Song localSong = new Song(title, artist, uri.toString(), 
-                                "android.resource://" + getPackageName() + "/" + R.drawable.music, true);
+                            // 新歌曲，插入，封面设为 null 以触发默认图标
+                            Song localSong = new Song(title, artist, uri.toString(), null, true);
                             localSong.album = album != null ? album : "Unknown Album";
                             localSong.duration = duration;
                             viewModel.insertSongs(java.util.Collections.singletonList(localSong));
@@ -354,6 +357,7 @@ public class MainActivity extends AppCompatActivity {
     private void setupNavigation() {
         View navDiscover = findViewById(R.id.navDiscover);
         View navMine = findViewById(R.id.navMine);
+        View navPlayer = findViewById(R.id.navPlayer);
         ImageView imgDiscover = (ImageView) ((android.view.ViewGroup) navDiscover).getChildAt(0);
         TextView txtDiscover = (TextView) ((android.view.ViewGroup) navDiscover).getChildAt(1);
         ImageView imgMine = (ImageView) ((android.view.ViewGroup) navMine).getChildAt(0);
@@ -368,10 +372,17 @@ public class MainActivity extends AppCompatActivity {
             switchFragment(new MineFragment(), "mine");
             updateNavUI(imgDiscover, txtDiscover, imgMine, txtMine, false);
         });
+
+        if (navPlayer != null) {
+            navPlayer.setOnClickListener(v -> showPlayerFragment());
+        }
+        if (lyricSwitcher != null) {
+            lyricSwitcher.setOnClickListener(v -> showPlayerFragment());
+        }
     }
 
     private void updateNavUI(ImageView imgDisc, TextView txtDisc, ImageView imgMine, TextView txtMine, boolean isDiscover) {
-        int activeColor = ContextCompat.getColor(this, R.color.white);
+        int activeColor = ContextCompat.getColor(this, R.color.accent_teal);
         int inactiveColor = ContextCompat.getColor(this, R.color.text_grey);
 
         imgDisc.setColorFilter(isDiscover ? activeColor : inactiveColor);
@@ -802,22 +813,21 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-            viewModel.getIsPlaying().observe(this, isPlaying -> {
-                if (mediaController != null) {
-                    if (isPlaying && !mediaController.isPlaying()) {
-                        // 如果用户直接点击播放按钮（没有通过点击歌曲列表）
-                        if (!hasUserPlayedSong && mediaController.getMediaItemCount() > 0) {
-                            // 标记用户主动播放歌曲
-                            hasUserPlayedSong = true;
-                            // 设置第一首歌的信息
-                            playFirstSongAndShowInfo();
-                        } else {
-                            mediaController.play();
-                        }
-                    } else if (!isPlaying && mediaController.isPlaying()) {
-                        mediaController.pause();
-                    }
+            viewModel.getTogglePlaybackRequest().observe(this, requestToken -> {
+                if (mediaController == null || requestToken == null || requestToken == 0) {
+                    return;
                 }
+
+                if (mediaController.isPlaying()) {
+                    mediaController.pause();
+                } else if (!hasUserPlayedSong && mediaController.getMediaItemCount() > 0) {
+                    hasUserPlayedSong = true;
+                    playFirstSongAndShowInfo();
+                } else {
+                    mediaController.play();
+                }
+
+                viewModel.consumeTogglePlaybackRequest();
             });
 
             viewModel.getSeekToPosition().observe(this, position -> {
@@ -827,26 +837,34 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-            viewModel.getNextRequest().observe(this, request -> {
-                if (mediaController != null && Boolean.TRUE.equals(request)) {
-                    if (mediaController.getMediaItemCount() > 0 && 
-                        mediaController.getCurrentMediaItemIndex() == mediaController.getMediaItemCount() - 1) {
-                        mediaController.seekTo(0, 0);
-                    } else {
-                        mediaController.seekToNext();
-                    }
+            viewModel.getNextRequest().observe(this, requestToken -> {
+                if (mediaController == null || requestToken == null || requestToken == 0) {
+                    return;
                 }
+
+                if (mediaController.getMediaItemCount() > 0 &&
+                    mediaController.getCurrentMediaItemIndex() == mediaController.getMediaItemCount() - 1) {
+                    mediaController.seekTo(0, 0);
+                } else {
+                    mediaController.seekToNext();
+                }
+
+                viewModel.clearNextRequest();
             });
 
-            viewModel.getPrevRequest().observe(this, request -> {
-                if (mediaController != null && Boolean.TRUE.equals(request)) {
-                    if (mediaController.getMediaItemCount() > 0 && 
-                        mediaController.getCurrentMediaItemIndex() == 0) {
-                        mediaController.seekTo(mediaController.getMediaItemCount() - 1, 0);
-                    } else {
-                        mediaController.seekToPrevious();
-                    }
+            viewModel.getPrevRequest().observe(this, requestToken -> {
+                if (mediaController == null || requestToken == null || requestToken == 0) {
+                    return;
                 }
+
+                if (mediaController.getMediaItemCount() > 0 &&
+                    mediaController.getCurrentMediaItemIndex() == 0) {
+                    mediaController.seekTo(mediaController.getMediaItemCount() - 1, 0);
+                } else {
+                    mediaController.seekToPrevious();
+                }
+
+                viewModel.clearPrevRequest();
             });
 
             viewModel.getLoopMode().observe(this, mode -> {
@@ -964,7 +982,9 @@ public class MainActivity extends AppCompatActivity {
     private void loadRotatingDiskCover(String url) {
         if (rotatingDisk == null) return;
         ImageRequest request = new ImageRequest.Builder(this)
-                .data(url)
+                .data(url != null && !url.isEmpty() ? url : R.drawable.music)
+                .placeholder(R.drawable.music)
+                .error(R.drawable.music)
                 .crossfade(true)
                 .target(rotatingDisk)
                 .build();
@@ -1010,7 +1030,7 @@ public class MainActivity extends AppCompatActivity {
         lyricSwitcher.setFactory(() -> {
             TextView tv = new TextView(MainActivity.this);
             tv.setGravity(android.view.Gravity.CENTER);
-            tv.setTextColor(android.graphics.Color.WHITE);
+            tv.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.text_primary));
             tv.setTextSize(14);
             return tv;
         });
@@ -1071,9 +1091,13 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void showPlayerFragment() {
-        updateNavAndMiniPlayer(false);
+    void showPlayerFragment() {
         PlayerFragment playerFragment = new PlayerFragment();
+        
+        // 移除旧的BackStackChangedListener，防止内存泄漏
+        if (backStackChangeListener != null) {
+            getSupportFragmentManager().removeOnBackStackChangedListener(backStackChangeListener);
+        }
         
         // Setup Shared Element Transition
         playerFragment.setSharedElementEnterTransition(
@@ -1089,18 +1113,38 @@ public class MainActivity extends AppCompatActivity {
                 .addToBackStack(null)
                 .commit();
         
-        getSupportFragmentManager().addOnBackStackChangedListener(new androidx.fragment.app.FragmentManager.OnBackStackChangedListener() {
-            @Override
-            public void onBackStackChanged() {
-                if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
-                    updateNavAndMiniPlayer(true);
-                }
+        // Use post to hide UI after transition starts, avoiding flickering
+        findViewById(R.id.bottomNav).post(() -> updateNavAndMiniPlayer(false));
+
+        // 创建并保存新的BackStackChangedListener引用
+        backStackChangeListener = () -> {
+            if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
+                updateNavAndMiniPlayer(true);
             }
-        });
+        };
+        getSupportFragmentManager().addOnBackStackChangedListener(backStackChangeListener);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, android.view.KeyEvent event) {
+        if (event.isCtrlPressed() && keyCode == android.view.KeyEvent.KEYCODE_T) {
+            int currentMode = ThemeManager.getInstance(this).getThemeMode();
+            int nextMode = (currentMode == ThemeManager.THEME_DARK) ? ThemeManager.THEME_LIGHT : ThemeManager.THEME_DARK;
+            ThemeManager.getInstance(this).setThemeMode(nextMode);
+            recreate();
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
     }
 
     @Override
     protected void onDestroy() {
+        // 移除BackStackChangedListener，防止内存泄漏
+        if (backStackChangeListener != null) {
+            getSupportFragmentManager().removeOnBackStackChangedListener(backStackChangeListener);
+            backStackChangeListener = null;
+        }
+        
         if (progressHandler != null) {
             progressHandler.stopUpdates();
             progressHandler.removeCallbacksAndMessages(null);
@@ -1127,4 +1171,3 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
     }
 }
-

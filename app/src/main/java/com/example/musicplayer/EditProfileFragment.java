@@ -156,8 +156,8 @@ public class EditProfileFragment extends Fragment {
                 ImageRequest request = new ImageRequest.Builder(requireContext())
                         .data(pendingUri)
                         .target(ivAvatar)
-                        .placeholder(R.drawable.music)
-                        .error(R.drawable.music)
+                        .placeholder(R.drawable.ic_default_avatar)
+                        .error(R.drawable.ic_default_avatar)
                         .crossfade(true)
                         .build();
                 Coil.imageLoader(requireContext()).enqueue(request);
@@ -169,8 +169,8 @@ public class EditProfileFragment extends Fragment {
                 ImageRequest request = new ImageRequest.Builder(requireContext())
                         .data(avatarUrl)
                         .target(ivAvatar)
-                        .placeholder(R.drawable.music)
-                        .error(R.drawable.music)
+                        .placeholder(R.drawable.ic_default_avatar)
+                        .error(R.drawable.ic_default_avatar)
                         .crossfade(true)
                         .build();
                 Coil.imageLoader(requireContext()).enqueue(request);
@@ -185,18 +185,54 @@ public class EditProfileFragment extends Fragment {
                     pendingUri = result.getData().getData();
                     if (pendingUri != null) {
                         Log.d("EditProfile", "Selected image uri: " + pendingUri);
-                        ImageRequest request = new ImageRequest.Builder(requireContext())
-                                .data(pendingUri)
-                                .target(ivAvatar)
-                                .placeholder(R.drawable.music)
-                                .error(R.drawable.music)
-                                .crossfade(true)
-                                .build();
-                        Coil.imageLoader(requireContext()).enqueue(request);
+                        try {
+                            requireContext().getContentResolver().takePersistableUriPermission(
+                                    pendingUri, 
+                                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            );
+                        } catch (Exception e) {
+                            Log.d("EditProfile", "Could not take persistable permission: " + e.getMessage());
+                        }
+                        try {
+                            // 释放旧的Bitmap防止内存泄漏
+                            releaseAvatarBitmap();
+                            
+                            android.graphics.Bitmap bitmap = android.provider.MediaStore.Images.Media.getBitmap(
+                                    requireContext().getContentResolver(), pendingUri);
+                            
+                            if (bitmap != null) {
+                                ivAvatar.setImageBitmap(bitmap);
+                                Log.d("EditProfile", "Successfully loaded bitmap, size: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+                            } else {
+                                ivAvatar.setImageURI(pendingUri);
+                            }
+                        } catch (Exception e) {
+                            Log.e("EditProfile", "Failed to load bitmap", e);
+                            ivAvatar.setImageURI(pendingUri);
+                        }
                     }
                 }
             }
     );
+    
+    /**
+     * 释放ImageView中当前的Bitmap资源
+     * 防止多次选择图片导致内存泄漏和OOM
+     */
+    private void releaseAvatarBitmap() {
+        if (ivAvatar == null) return;
+        
+        android.graphics.drawable.Drawable drawable = ivAvatar.getDrawable();
+        if (drawable instanceof android.graphics.drawable.BitmapDrawable) {
+            android.graphics.drawable.BitmapDrawable bitmapDrawable = (android.graphics.drawable.BitmapDrawable) drawable;
+            android.graphics.Bitmap bitmap = bitmapDrawable.getBitmap();
+            
+            if (bitmap != null && !bitmap.isRecycled()) {
+                bitmap.recycle();
+                Log.d("EditProfile", "Old avatar bitmap recycled");
+            }
+        }
+    }
 
     private void pickImage() {
         Intent intent = new Intent(Intent.ACTION_PICK);
@@ -208,7 +244,7 @@ public class EditProfileFragment extends Fragment {
         android.widget.FrameLayout container = new android.widget.FrameLayout(getContext());
         android.widget.EditText editText = new android.widget.EditText(getContext());
         editText.setText(targetView.getText());
-        editText.setTextColor(android.graphics.Color.WHITE);
+        editText.setTextColor(getResources().getColor(R.color.text_primary, null));
         editText.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getResources().getColor(R.color.accent_teal, null)));
 
         android.widget.FrameLayout.LayoutParams params = new android.widget.FrameLayout.LayoutParams(
@@ -228,6 +264,10 @@ public class EditProfileFragment extends Fragment {
                 .create();
 
         dialog.show();
+
+        // 统一设置按钮颜色（兜底方案，如果 Style 未生效）
+        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setTextColor(getResources().getColor(R.color.accent_teal, null));
+        dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE).setTextColor(getResources().getColor(R.color.text_grey, null));
 
         // 强制对话框宽度
         if (dialog.getWindow() != null) {
@@ -411,5 +451,12 @@ public class EditProfileFragment extends Fragment {
             }
         }
         return inSampleSize;
+    }
+    
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // Fragment销毁时释放Bitmap资源，防止内存泄漏
+        releaseAvatarBitmap();
     }
 }

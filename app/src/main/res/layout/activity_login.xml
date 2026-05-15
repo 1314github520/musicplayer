@@ -34,7 +34,7 @@
                 android:text="MusicPlayer"
                 android:textSize="36sp"
                 android:textStyle="bold"
-                android:textColor="@color/white"
+                android:textColor="@color/text_primary"
                 android:layout_gravity="center"
                 android:layout_marginBottom="8dp"/>
 
@@ -77,7 +77,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="textEmailAddress"
-                            android:textColor="@color/white"
+                            android:textColor="@color/text_primary"
                             android:textSize="15sp"
                             android:textColorHint="@color/text_grey"/>
                     </com.google.android.material.textfield.TextInputLayout>
@@ -100,7 +100,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="textPassword"
-                            android:textColor="@color/white"
+                            android:textColor="@color/text_primary"
                             android:textSize="15sp"
                             android:textColorHint="@color/text_grey"/>
                     </com.google.android.material.textfield.TextInputLayout>

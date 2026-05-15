@@ -18,14 +18,15 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         app:cardCornerRadius="8dp"
-        app:cardElevation="0dp">
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="@color/card_bg">
 
         <ImageView
             android:id="@+id/songCover"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="centerCrop"
-            android:src="@drawable/ic_launcher_foreground" />
+            android:src="@drawable/music" />
     </androidx.cardview.widget.CardView>
 
     <LinearLayout
@@ -40,7 +41,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="歌曲名称"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary"
             android:textSize="16sp"
             android:textStyle="bold" />
 
@@ -50,7 +51,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:text="歌手姓名"
-            android:textColor="#99FFFFFF"
+            android:textColor="@color/text_secondary"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -61,7 +62,7 @@
         android:layout_marginEnd="8dp"
         android:src="@android:drawable/stat_sys_download"
         android:padding="2dp"
-        app:tint="#66FFFFFF" />
+        app:tint="@color/text_secondary" />
 
     <ImageView
         android:id="@+id/btnItemFavorite"
@@ -69,6 +70,6 @@
         android:layout_height="24dp"
         android:src="@android:drawable/btn_star_big_off"
         android:padding="2dp"
-        app:tint="#66FFFFFF" />
+        app:tint="@color/text_secondary" />
 
 </LinearLayout>

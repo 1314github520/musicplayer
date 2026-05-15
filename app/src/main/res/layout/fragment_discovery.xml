@@ -28,7 +28,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/discover"
-                android:textColor="@color/white"
+                android:textColor="@color/text_primary"
                 android:textSize="22sp"
                 android:textStyle="bold" />
 
@@ -84,7 +84,7 @@
                 android:layout_weight="1"
                 android:background="@null"
                 android:hint="@string/search_hint"
-                android:textColor="@color/white"
+                android:textColor="@color/text_primary"
                 android:textColorHint="@color/text_grey"
                 android:textSize="12sp"
                 android:clickable="false"
@@ -115,22 +115,28 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="16dp"
+            android:paddingBottom="100dp">
 
             <!-- Hero Card -->
             <FrameLayout
+                android:id="@+id/heroContainer"
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="24dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
 
-                <androidx.cardview.widget.CardView
+                <com.google.android.material.card.MaterialCardView
                     android:id="@+id/heroCardContainer"
                     android:layout_width="match_parent"
                     android:layout_height="100dp"
                     android:layout_gravity="bottom"
                     app:cardBackgroundColor="@color/card_bg"
                     app:cardCornerRadius="24dp"
-                    app:cardElevation="0dp">
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
 
                     <androidx.constraintlayout.widget.ConstraintLayout
                         android:layout_width="match_parent"
@@ -153,11 +159,22 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:ellipsize="end"
-                                android:maxLines="2"
+                                android:maxLines="1"
                                 android:text="未在播放"
-                                android:textColor="@color/white"
+                                android:textColor="@color/text_primary"
                                 android:textSize="18sp"
                                 android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/heroSubtitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:text=""
+                                android:textColor="@color/text_grey"
+                                android:textSize="13sp" />
                         </LinearLayout>
 
                         <ImageView
@@ -174,7 +191,7 @@
                             app:tint="@color/white" />
 
                     </androidx.constraintlayout.widget.ConstraintLayout>
-                </androidx.cardview.widget.CardView>
+                </com.google.android.material.card.MaterialCardView>
 
                 <!-- Disk Image Centered Relative to Card -->
                 <RelativeLayout
@@ -183,12 +200,13 @@
                     android:layout_gravity="bottom"
                     android:layout_marginStart="16dp">
 
-                    <androidx.cardview.widget.CardView
+                    <com.google.android.material.card.MaterialCardView
                         android:layout_width="85dp"
                         android:layout_height="85dp"
                         android:layout_centerInParent="true"
                         app:cardCornerRadius="42.5dp"
-                        app:cardElevation="8dp">
+                        app:cardElevation="8dp"
+                        app:strokeWidth="0dp">
 
                         <ImageView
                             android:id="@+id/heroImage"
@@ -197,7 +215,7 @@
                             android:contentDescription="@null"
                             android:scaleType="centerCrop"
                             android:src="@drawable/music" />
-                    </androidx.cardview.widget.CardView>
+                    </com.google.android.material.card.MaterialCardView>
                 </RelativeLayout>
             </FrameLayout>
 
@@ -212,7 +230,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/treasure_recommend"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold" />
 
@@ -228,13 +246,14 @@
             </RelativeLayout>
 
             <!-- New Songs Card -->
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/layoutNewSongs"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="#2A3C44"
+                app:cardBackgroundColor="@color/card_bg"
                 app:cardCornerRadius="24dp"
-                app:cardElevation="0dp">
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
@@ -246,7 +265,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/new_song_express"
-                        android:textColor="@color/white"
+                        android:textColor="@color/text_primary"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         app:layout_constraintStart_toStartOf="parent"
@@ -266,11 +285,12 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:orientation="vertical">
-                            <androidx.cardview.widget.CardView
+                            <com.google.android.material.card.MaterialCardView
                                 android:layout_width="match_parent"
                                 android:layout_height="100dp"
                                 app:cardCornerRadius="12dp"
-                                app:cardElevation="0dp">
+                                app:cardElevation="0dp"
+                                app:strokeWidth="0dp">
                                 <ImageView
                                     android:id="@+id/imgSong1"
                                     android:layout_width="match_parent"
@@ -278,7 +298,7 @@
                                     android:scaleType="centerCrop"
                                     android:src="@drawable/music"
                                     android:contentDescription="@null" />
-                            </androidx.cardview.widget.CardView>
+                            </com.google.android.material.card.MaterialCardView>
                             <TextView
                                 android:id="@+id/tvSongName1"
                                 android:layout_width="wrap_content"
@@ -287,14 +307,15 @@
                                 android:ellipsize="end"
                                 android:maxLines="1"
                                 android:text="@string/song_1"
-                                android:textColor="@color/white"
-                                android:textSize="11sp" />
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
                             <TextView
                                 android:id="@+id/tvArtistName1"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/artist_1"
-                                android:textColor="@color/text_grey"
+                                android:textColor="@color/text_secondary"
                                 android:textSize="11sp" />
                         </LinearLayout>
 
@@ -306,11 +327,12 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:orientation="vertical">
-                            <androidx.cardview.widget.CardView
+                            <com.google.android.material.card.MaterialCardView
                                 android:layout_width="match_parent"
                                 android:layout_height="100dp"
                                 app:cardCornerRadius="12dp"
-                                app:cardElevation="0dp">
+                                app:cardElevation="0dp"
+                                app:strokeWidth="0dp">
                                 <ImageView
                                     android:id="@+id/imgSong2"
                                     android:layout_width="match_parent"
@@ -318,7 +340,7 @@
                                     android:scaleType="centerCrop"
                                     android:src="@drawable/music"
                                     android:contentDescription="@null" />
-                            </androidx.cardview.widget.CardView>
+                            </com.google.android.material.card.MaterialCardView>
                             <TextView
                                 android:id="@+id/tvSongName2"
                                 android:layout_width="wrap_content"
@@ -327,14 +349,15 @@
                                 android:ellipsize="end"
                                 android:maxLines="1"
                                 android:text="@string/song_2"
-                                android:textColor="@color/white"
-                                android:textSize="11sp" />
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
                             <TextView
                                 android:id="@+id/tvArtistName2"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/artist_2"
-                                android:textColor="@color/text_grey"
+                                android:textColor="@color/text_secondary"
                                 android:textSize="11sp" />
                         </LinearLayout>
 
@@ -346,11 +369,12 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:orientation="vertical">
-                            <androidx.cardview.widget.CardView
+                            <com.google.android.material.card.MaterialCardView
                                 android:layout_width="match_parent"
                                 android:layout_height="100dp"
                                 app:cardCornerRadius="12dp"
-                                app:cardElevation="0dp">
+                                app:cardElevation="0dp"
+                                app:strokeWidth="0dp">
                                 <ImageView
                                     android:id="@+id/imgSong3"
                                     android:layout_width="match_parent"
@@ -358,7 +382,7 @@
                                     android:scaleType="centerCrop"
                                     android:src="@drawable/music"
                                     android:contentDescription="@null" />
-                            </androidx.cardview.widget.CardView>
+                            </com.google.android.material.card.MaterialCardView>
 
                             <TextView
                                 android:id="@+id/tvSongName3"
@@ -368,19 +392,20 @@
                                 android:ellipsize="end"
                                 android:maxLines="1"
                                 android:text="@string/song_3"
-                                android:textColor="@color/white"
-                                android:textSize="11sp" />
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
                             <TextView
                                 android:id="@+id/tvArtistName3"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/artist_3"
-                                android:textColor="@color/text_grey"
+                                android:textColor="@color/text_secondary"
                                 android:textSize="11sp" />
                         </LinearLayout>
                     </LinearLayout>
                 </androidx.constraintlayout.widget.ConstraintLayout>
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Recommended Songs List (Spotify Style) -->
             <TextView
@@ -389,7 +414,7 @@
                 android:layout_marginTop="32dp"
                 android:layout_marginBottom="8dp"
                 android:text="@string/recommended_songs"
-                android:textColor="@color/white"
+                android:textColor="@color/text_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -407,7 +432,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:text="#"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
 
                 <View
@@ -420,7 +445,7 @@
                     android:layout_weight="3"
                     android:layout_marginStart="12dp"
                     android:text="音乐"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
 
                 <TextView
@@ -429,7 +454,7 @@
                     android:layout_weight="2"
                     android:layout_marginStart="8dp"
                     android:text="专辑"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
 
                 <FrameLayout
@@ -440,7 +465,7 @@
                         android:layout_height="14dp"
                         android:layout_gravity="end"
                         android:src="@android:drawable/ic_menu_recent_history"
-                        app:tint="@color/white" />
+                        app:tint="@color/text_secondary" />
                 </FrameLayout>
 
                 <View
@@ -454,7 +479,7 @@
                 android:layout_marginStart="4dp"
                 android:layout_marginEnd="16dp"
                 android:layout_marginBottom="8dp"
-                android:background="#33FFFFFF" />
+                android:background="@color/background_darker" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recommendedSongList"
@@ -519,7 +544,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/recent_search"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
 
@@ -531,7 +556,7 @@
                     android:layout_centerVertical="true"
                     android:src="@android:drawable/ic_menu_delete"
                     android:alpha="0.6"
-                    app:tint="@color/white" />
+                    app:tint="@color/text_primary" />
             </RelativeLayout>
 
             <LinearLayout
@@ -557,7 +582,7 @@
                     android:padding="4dp"
                     android:src="@android:drawable/arrow_down_float"
                     android:alpha="0.4"
-                    app:tint="@color/white" />
+                    app:tint="@color/text_primary" />
             </LinearLayout>
 
             <!-- Hot Search Section -->
@@ -570,7 +595,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/hot_search"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
 
@@ -581,7 +606,7 @@
                     android:layout_centerVertical="true"
                     android:src="@android:drawable/ic_menu_rotate"
                     android:alpha="0.6"
-                    app:tint="@color/white" />
+                    app:tint="@color/text_primary" />
             </RelativeLayout>
 
             <com.google.android.material.chip.ChipGroup

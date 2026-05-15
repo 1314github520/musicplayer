@@ -3,15 +3,46 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <color name="bg_dark">#121417</color>
-    <color name="card_bg">#1E2228</color>
-    <color name="accent_teal">#26D1D1</color>
-    <color name="text_grey">#999999</color>
-    <color name="search_bg">#1A1D21</color>
-    <color name="background_darker">#0D0F12</color>
+    <!-- 基础背景和文本色 - 浅色模式优化 -->
+    <color name="bg_dark">#FFFFFF</color>
+    <color name="card_bg">#F5F7F9</color>
+    <color name="text_grey">#8A8A8E</color>
+    <color name="search_bg">#EFEFF4</color>
+    <color name="background_darker">#E5E5EA</color>
+    <color name="text_primary">#000000</color>
+    <color name="text_secondary">#444444</color>
 
+    <!-- 登录注册背景 -->
+    <color name="login_bg_start">#F8F9FA</color>
+    <color name="login_bg_end">#E9ECEF</color>
+
+    <!-- 播放器专用（浅色模式 - 统一为深色沉浸式风格） -->
+    <color name="player_bg">#121214</color>
+    <color name="player_text_primary">#FFFFFF</color>
+    <color name="player_text_secondary">#88FFFFFF</color>
+    <color name="player_icon_tint">#FFFFFF</color>
+    
+    <!-- 播放器按钮状态色（浅色模式 - 统一为深色风格） -->
+    <color name="player_btn_favorite_active">#FFD700</color>
+    <color name="player_btn_favorite_inactive">#88FFFFFF</color>
+    <color name="player_btn_download_active">#4CAF50</color>
+    <color name="player_btn_download_inactive">#88FFFFFF</color>
+    
+    <!-- 歌词颜色（浅色模式 - 统一为深色背景亮色调） -->
+    <color name="lyric_current">#00E5FF</color>
+    <color name="lyric_normal">#B0BEC5</color>
+
+    <color name="accent_teal">#006060</color>
+    <color name="button_secondary_bg">#E5E5EA</color>
     <color name="colorPrimary">#26D1D1</color>
     <color name="gray">#9E9E9E</color>
     <color name="light_gray">#E0E0E0</color>
     <color name="red">#FF4444</color>
+    <!-- 播放器进度条（浅色模式 - 统一为深色风格） -->
+    <color name="player_progress_bg">#33FFFFFF</color>
+    <color name="player_progress_active">#00E5FF</color>
+    
+    <!-- 播放器交互按钮背景（浅色模式 - 统一为深色风格） -->
+    <color name="player_btn_bg">#22FFFFFF</color>
+    <color name="player_btn_ripple">#40FFFFFF</color>
 </resources>

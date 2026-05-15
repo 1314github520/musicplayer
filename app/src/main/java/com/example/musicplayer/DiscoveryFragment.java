@@ -31,8 +31,10 @@ import coil.request.SuccessResult;
 public class DiscoveryFragment extends Fragment {
 
     private CardView heroCard;
+    private View heroContainer;
     private ImageView heroImage;
     private TextView heroLyric;
+    private TextView heroSubtitle;
     private ImageView imgSong1, imgSong2, imgSong3;
     private ImageView btnHeroPlay;
     private View searchBar;
@@ -77,6 +79,7 @@ public class DiscoveryFragment extends Fragment {
         );
 
         heroCard = view.findViewById(R.id.heroCardContainer);
+        heroContainer = view.findViewById(R.id.heroContainer);
         heroImage = view.findViewById(R.id.heroImage);
         heroLyric = view.findViewById(R.id.heroLyric);
 
@@ -116,11 +119,15 @@ public class DiscoveryFragment extends Fragment {
         });
 
         viewModel.getSongTitle().observe(getViewLifecycleOwner(), title -> {
-            updateHeroCard(title, viewModel.getCoverUrl().getValue());
+            updateHeroCard(title, viewModel.getSongArtist().getValue(), viewModel.getCoverUrl().getValue());
+        });
+
+        viewModel.getSongArtist().observe(getViewLifecycleOwner(), artist -> {
+            updateHeroCard(viewModel.getSongTitle().getValue(), artist, viewModel.getCoverUrl().getValue());
         });
 
         viewModel.getCoverUrl().observe(getViewLifecycleOwner(), url -> {
-            updateHeroCard(viewModel.getSongTitle().getValue(), url);
+            updateHeroCard(viewModel.getSongTitle().getValue(), viewModel.getSongArtist().getValue(), url);
         });
 
         viewModel.getIsPlaying().observe(getViewLifecycleOwner(), isPlaying -> {
@@ -221,7 +228,7 @@ public class DiscoveryFragment extends Fragment {
         }
     }
 
-    private void updateHeroCard(String title, String coverUrl) {
+    private void updateHeroCard(String title, String artist, String coverUrl) {
         if (heroImage != null) {
             ImageLoader imageLoader = Coil.imageLoader(requireContext());
             ImageRequest request = new ImageRequest.Builder(requireContext())
@@ -248,32 +255,87 @@ public class DiscoveryFragment extends Fragment {
         if (heroLyric != null) {
             // 显示正在播放状态
             if (title != null && !title.isEmpty() && !title.equals("未知歌曲")) {
-                heroLyric.setText("正在播放：" + title);
-                heroLyric.setVisibility(View.VISIBLE);
+                heroLyric.setText(title);
+                if (heroSubtitle != null) {
+                    heroSubtitle.setText(artist != null ? artist : "未知歌手");
+                    heroSubtitle.setVisibility(View.VISIBLE);
+                }
             } else {
-                // 没有歌曲播放时显示"正在播放："
-                heroLyric.setText("正在播放：");
-                heroLyric.setVisibility(View.VISIBLE);
+                heroLyric.setText("发现好音乐");
+                if (heroSubtitle != null) {
+                    heroSubtitle.setText("开启你的听歌之旅");
+                    heroSubtitle.setVisibility(View.VISIBLE);
+                }
             }
+            heroLyric.setVisibility(View.VISIBLE);
         }
     }
 
     private void setupClickListeners() {
-        View.OnClickListener playListener = v -> {
-            Boolean currentlyPlaying = viewModel.getIsPlaying().getValue();
-            if (currentlyPlaying != null) {
-                viewModel.setIsPlaying(!currentlyPlaying);
-            }
-        };
+        View.OnClickListener playListener = v -> viewModel.requestTogglePlayback();
         if (btnHeroPlay != null) btnHeroPlay.setOnClickListener(playListener);
+        
+        if (heroContainer != null) {
+            heroContainer.setOnClickListener(v -> {
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).showPlayerFragment();
+                }
+            });
+        }
     }
 
     private void extractColor(Bitmap bitmap) {
+        if (!isAdded() || getContext() == null) return;
+        
         Palette.from(bitmap).generate(palette -> {
-            if (palette != null) {
-                int dominantColor = palette.getDarkMutedColor(Color.parseColor("#1E2228"));
+            if (palette != null && isAdded()) {
+                int mode = ThemeManager.getInstance(requireContext()).getThemeMode();
+                boolean isDarkMode = (mode == ThemeManager.THEME_DARK);
+                
+                int color;
+                if (isDarkMode) {
+                    // 深色模式：使用深暗色调
+                    color = palette.getDarkMutedColor(Color.parseColor("#1E2228"));
+                } else {
+                    // 浅色模式优化：尝试获取柔和的浅色
+                    int lightVibrant = palette.getLightVibrantColor(Color.TRANSPARENT);
+                    int lightMuted = palette.getLightMutedColor(Color.TRANSPARENT);
+                    
+                    if (lightMuted != Color.TRANSPARENT) {
+                        color = lightMuted;
+                    } else if (lightVibrant != Color.TRANSPARENT) {
+                        color = lightVibrant;
+                    } else {
+                        // 兜底方案：取主色并大幅度提高亮度/降低饱和度
+                        int dominant = palette.getDominantColor(Color.parseColor("#F5F7F9"));
+                        float[] hsv = new float[3];
+                        Color.colorToHSV(dominant, hsv);
+                        hsv[1] = Math.min(hsv[1], 0.12f); // 极低饱和度
+                        hsv[2] = 0.98f; // 极高亮度
+                        color = Color.HSVToColor(hsv);
+                    }
+                }
+                
                 if (heroCard != null) {
-                    heroCard.setCardBackgroundColor(dominantColor);
+                    heroCard.setCardBackgroundColor(color);
+                }
+                
+                // 动态调整文本颜色
+                if (heroLyric != null) {
+                    double luminance = androidx.core.graphics.ColorUtils.calculateLuminance(color);
+                    int textColor;
+                    int subTextColor;
+                    if (luminance < 0.4) {
+                        textColor = Color.WHITE;
+                        subTextColor = Color.parseColor("#CCFFFFFF");
+                    } else {
+                        textColor = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.text_primary);
+                        subTextColor = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.text_grey);
+                    }
+                    heroLyric.setTextColor(textColor);
+                    if (heroSubtitle != null) {
+                        heroSubtitle.setTextColor(subTextColor);
+                    }
                 }
             }
         });

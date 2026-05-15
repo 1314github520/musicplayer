@@ -84,6 +84,8 @@ dependencies {
     implementation("com.airbnb.android:lottie:6.4.0")
 
     testImplementation(libs.junit)
+    testImplementation("org.robolectric:robolectric:4.11.1")
+    testImplementation("org.mockito:mockito-core:5.11.0")
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
 }

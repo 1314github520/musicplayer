@@ -69,6 +69,21 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.ViewHolder> {
         return selectedList;
     }
 
+    /**
+     * 获取当前数据列表
+     */
+    public List<Song> getData() {
+        return songs;
+    }
+
+    /**
+     * 更新数据列表（用于LiveData观察时更新，避免重建Adapter）
+     */
+    public void updateData(List<Song> newSongs) {
+        this.songs = newSongs;
+        notifyDataSetChanged();
+    }
+
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -83,18 +98,33 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.ViewHolder> {
         // 显示歌手而不是作曲家
         holder.artist.setText(song.singer != null ? song.singer : song.artist);
         
-        // 本地音乐显示music.png封面
-        String coverUrl = song.coverUrl;
-        if (song.isLocal && (coverUrl == null || coverUrl.trim().isEmpty())) {
-            coverUrl = "android.resource://" + holder.itemView.getContext().getPackageName() + "/" + R.drawable.music;
+        // 统一处理封面加载逻辑
+        boolean hasRealCover = song.coverUrl != null && 
+                              !song.coverUrl.trim().isEmpty() && 
+                              !song.coverUrl.startsWith("android.resource");
+
+        if (hasRealCover) {
+            holder.cover.setPadding(0, 0, 0, 0);
+            holder.cover.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            holder.cover.setColorFilter(null);
+            holder.cover.setBackground(null);
+            
+            ImageRequest request = new ImageRequest.Builder(holder.itemView.getContext())
+                    .data(song.coverUrl)
+                    .target(holder.cover)
+                    .crossfade(true)
+                    .placeholder(R.drawable.music)
+                    .error(R.drawable.music)
+                    .build();
+            Coil.imageLoader(holder.itemView.getContext()).enqueue(request);
+        } else {
+            holder.cover.setImageResource(R.drawable.music);
+            holder.cover.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            int p = (int) (10 * holder.itemView.getContext().getResources().getDisplayMetrics().density);
+            holder.cover.setPadding(p, p, p, p);
+            holder.cover.setColorFilter(null);
+            holder.cover.setBackground(null);
         }
-        
-        ImageRequest request = new ImageRequest.Builder(holder.itemView.getContext())
-                .data(coverUrl)
-                .target(holder.cover)
-                .crossfade(true)
-                .build();
-        Coil.imageLoader(holder.itemView.getContext()).enqueue(request);
 
         // Hide favorite button as feature is removed
         holder.btnFavorite.setVisibility(View.GONE);

@@ -3,8 +3,8 @@
     android:color="@color/player_btn_ripple">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/player_btn_bg" />
-            <corners android:radius="40dp" />
+            <solid android:color="@color/button_secondary_bg" />
+            <corners android:radius="26dp" />
         </shape>
     </item>
 </ripple>

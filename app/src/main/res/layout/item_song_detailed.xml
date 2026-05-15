@@ -16,7 +16,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:text="1"
-        android:textColor="#66FFFFFF"
+        android:textColor="@color/text_secondary"
         android:textSize="14sp"
         android:gravity="center_horizontal" />
 
@@ -30,7 +30,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="centerCrop"
-            android:src="@android:drawable/ic_menu_gallery" />
+            android:src="@drawable/music" />
     </androidx.cardview.widget.CardView>
 
     <LinearLayout
@@ -46,7 +46,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:text="歌曲名称"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary"
             android:textSize="15sp"
             android:textStyle="bold" />
         <TextView
@@ -56,7 +56,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:text="歌手名称"
-            android:textColor="#99FFFFFF"
+            android:textColor="@color/text_secondary"
             android:textSize="12sp" />
     </LinearLayout>
 
@@ -69,7 +69,7 @@
         android:ellipsize="end"
         android:maxLines="1"
         android:text="专辑名称"
-        android:textColor="#99FFFFFF"
+        android:textColor="@color/text_secondary"
         android:textSize="14sp" />
 
     <ImageView
@@ -78,7 +78,7 @@
         android:layout_height="20dp"
         android:layout_marginStart="8dp"
         android:src="@android:drawable/ic_input_add"
-        app:tint="#66FFFFFF"
+        app:tint="@color/text_secondary"
         android:visibility="invisible" />
 
     <TextView
@@ -87,7 +87,7 @@
         android:layout_height="wrap_content"
         android:gravity="end"
         android:text="03:45"
-        android:textColor="#66FFFFFF"
+        android:textColor="@color/text_secondary"
         android:textSize="14sp" />
 
     <ImageView
@@ -96,6 +96,6 @@
         android:layout_height="24dp"
         android:layout_marginStart="8dp"
         android:src="@android:drawable/ic_menu_more"
-        app:tint="#66FFFFFF" />
+        app:tint="@color/text_secondary" />
 
 </LinearLayout>

@@ -24,7 +24,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/bottomNav" />
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <!-- Lyric Display -->
     <TextSwitcher
@@ -61,7 +61,7 @@
                 android:layout_width="26dp"
                 android:layout_height="26dp"
                 android:src="@android:drawable/ic_menu_compass"
-                app:tint="@color/white"
+                app:tint="@color/accent_teal"
                 android:contentDescription="@null" />
 
             <TextView
@@ -69,7 +69,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/discover"
-                android:textColor="@color/white"
+                android:textColor="@color/text_primary"
                 android:textSize="11sp" />
         </LinearLayout>
 
@@ -88,14 +88,14 @@
                 android:layout_height="match_parent"
                 app:cardCornerRadius="32dp"
                 app:cardElevation="4dp"
-                app:cardBackgroundColor="#000000">
+                app:cardBackgroundColor="@color/background_darker">
 
                 <ImageView
                     android:id="@+id/rotatingDisk"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:scaleType="centerCrop"
-                    android:src="@drawable/ic_launcher_background"
+                    android:src="@drawable/music"
                     android:contentDescription="@null"
                     android:transitionName="song_cover" />
             </androidx.cardview.widget.CardView>

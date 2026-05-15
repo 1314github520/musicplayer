@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_dark">#121417</color>
+    <color name="card_bg">#1E2228</color>
+    <color name="text_grey">#999999</color>
+    <color name="search_bg">#1A1D21</color>
+    <color name="background_darker">#0D0F12</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#999999</color>
+
+    <!-- 登录注册背景 -->
+    <color name="login_bg_start">#121417</color>
+    <color name="login_bg_end">#1E2228</color>
+
+    <!-- 播放器专用（深色模式） -->
+    <color name="player_bg">#121214</color>
+    <color name="player_text_primary">#FFFFFF</color>
+    <color name="player_text_secondary">#88FFFFFF</color>
+    <color name="player_icon_tint">#FFFFFF</color>
+    
+    <!-- 播放器按钮状态色（深色模式） -->
+    <color name="player_btn_favorite_active">#FFD700</color>
+    <color name="player_btn_favorite_inactive">#88FFFFFF</color>
+    <color name="player_btn_download_active">#4CAF50</color>
+    <color name="player_btn_download_inactive">#88FFFFFF</color>
+    
+    <!-- 歌词颜色（深色模式） -->
+    <color name="lyric_current">#00E5FF</color>
+    <color name="lyric_normal">#B0BEC5</color>
+    <!-- 播放器进度条 -->
+    <color name="player_progress_bg">#33FFFFFF</color>
+    <color name="player_progress_active">#00E5FF</color>
+    <!-- 播放器交互按钮背景 -->
+    <color name="player_btn_bg">#22FFFFFF</color>
+    <color name="player_btn_ripple">#40FFFFFF</color>
+    <color name="button_secondary_bg">#2C2C2E</color>
+</resources>

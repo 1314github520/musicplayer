@@ -2,6 +2,11 @@
     <!-- Base application theme. -->
     <style name="Base.Theme.MusicPlayer" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="android:windowBackground">@color/bg_dark</item>
+        <item name="android:statusBarColor">@color/bg_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="colorPrimary">@color/accent_teal</item>
+        <item name="colorSurface">@color/card_bg</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
     </style>
 </resources>

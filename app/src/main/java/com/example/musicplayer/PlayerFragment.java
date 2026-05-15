@@ -15,6 +15,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.palette.graphics.Palette;
@@ -152,10 +153,7 @@ public class PlayerFragment extends Fragment {
         view.findViewById(R.id.btnBack).setOnClickListener(v -> requireActivity().onBackPressed());
 
         btnPlayPause.setOnClickListener(v -> {
-            Boolean playing = viewModel.getIsPlaying().getValue();
-            if (playing != null) {
-                viewModel.setIsPlaying(!playing);
-            }
+            viewModel.requestTogglePlayback();
         });
 
         btnPrev.setOnClickListener(v -> viewModel.playPrevious());
@@ -231,7 +229,10 @@ public class PlayerFragment extends Fragment {
 
     private void updateFavoriteIcon(boolean isFavorite) {
         btnFavorite.setImageResource(isFavorite ? android.R.drawable.btn_star_big_on : android.R.drawable.btn_star_big_off);
-        btnFavorite.getDrawable().setTint(isFavorite ? 0xFFFFD700 : 0x88FFFFFF); // Gold color for favorite
+        // 使用主题资源色，自动适配浅色/深色模式
+        int color = ContextCompat.getColor(requireContext(), 
+            isFavorite ? R.color.player_btn_favorite_active : R.color.player_btn_favorite_inactive);
+        btnFavorite.getDrawable().setTint(color);
     }
 
     private void downloadCurrentSong() {
@@ -321,7 +322,10 @@ public class PlayerFragment extends Fragment {
         btnDownload.setImageResource(isDownloaded ? 
             android.R.drawable.stat_sys_download_done : 
             android.R.drawable.stat_sys_download);
-        btnDownload.getDrawable().setTint(isDownloaded ? 0xFF4CAF50 : 0x88FFFFFF);
+        // 使用主题资源色，自动适配浅色/深色模式
+        int color = ContextCompat.getColor(requireContext(), 
+            isDownloaded ? R.color.player_btn_download_active : R.color.player_btn_download_inactive);
+        btnDownload.getDrawable().setTint(color);
     }
 
     private void observeViewModel() {

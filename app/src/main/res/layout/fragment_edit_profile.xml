@@ -20,33 +20,36 @@
             android:layout_height="32dp"
             android:layout_centerVertical="true"
             android:src="@android:drawable/ic_menu_revert"
-            app:tint="@color/white" />
+            app:tint="@color/text_primary" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:text="编辑资料"
-            android:textColor="@color/white"
+            android:textColor="@color/text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
 
         <Button
             android:id="@+id/btnSave"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
+            android:minWidth="0dp"
+            android:paddingHorizontal="12dp"
             android:text="保存"
             android:textColor="@color/accent_teal"
             android:textSize="16sp"
-            android:textStyle="bold"
-            android:background="@null" />
+            android:textStyle="bold" />
     </RelativeLayout>
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -64,7 +67,7 @@
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
                     android:text="头像"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp" />
 
                 <androidx.cardview.widget.CardView
@@ -109,7 +112,7 @@
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
                     android:text="昵称"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp" />
 
                 <TextView
@@ -148,7 +151,7 @@
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
                     android:text="邮箱"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp" />
 
                 <TextView
@@ -187,7 +190,7 @@
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
                     android:text="手机号"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp" />
 
                 <TextView
@@ -216,7 +219,7 @@
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
                     android:text="性别"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp" />
 
                 <TextView
@@ -255,7 +258,7 @@
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
                     android:text="生日"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp" />
 
                 <TextView

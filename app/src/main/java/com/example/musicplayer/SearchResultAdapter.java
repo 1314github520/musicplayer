@@ -57,7 +57,7 @@ public class SearchResultAdapter extends RecyclerView.Adapter<SearchResultAdapte
         
         boolean isCurrent = song.id == currentPlayingId;
         int activeColor = 0xFF1DB954; // Spotify Green
-        int inactiveColor = 0x66FFFFFF;
+        int inactiveColor = holder.itemView.getContext().getColor(R.color.text_secondary);
 
         if (isCurrent) {
             holder.index.setText(""); // Hide number
@@ -74,7 +74,7 @@ public class SearchResultAdapter extends RecyclerView.Adapter<SearchResultAdapte
         }
 
         holder.title.setText(getHighlightedText(song.title, searchQuery));
-        holder.title.setTextColor(isCurrent ? activeColor : 0xFFFFFFFF);
+        holder.title.setTextColor(isCurrent ? activeColor : holder.itemView.getContext().getColor(R.color.text_primary));
 
         // 显示歌手而不是作曲家，并高亮显示匹配的文字
         holder.artist.setText(getHighlightedText(song.singer != null ? song.singer : song.artist, searchQuery));
@@ -93,10 +93,12 @@ public class SearchResultAdapter extends RecyclerView.Adapter<SearchResultAdapte
                     .data(song.coverUrl)
                     .target(holder.cover)
                     .crossfade(true)
+                    .placeholder(R.drawable.music)
+                    .error(R.drawable.music)
                     .build()
             );
         } else {
-            holder.cover.setImageResource(android.R.drawable.ic_menu_gallery);
+            holder.cover.setImageResource(R.drawable.music);
         }
         
         holder.itemView.setOnClickListener(v -> {

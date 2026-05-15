@@ -17,22 +17,30 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 public class UserManager {
     private static final String TAG = "UserManager";
     private static final String PREF_NAME = "user_prefs";
     private static final String KEY_USER_DATA = "user_data";
     private static final String KEY_TOKEN = "token";
 
-    private static UserManager instance;
+    private static volatile UserManager instance;
     private final Context context;
     private final SharedPreferences preferences;
     private final OkHttpClient httpClient;
-    private User currentUser;
+    private volatile User currentUser;
+    
+    // 统一线程池管理，避免频繁创建销毁线程
+    private final ExecutorService networkExecutor;
 
     private UserManager(Context context) {
         this.context = context.getApplicationContext();
         this.preferences = this.context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         this.httpClient = HttpClient.getInstance();
+        // 初始化网络请求线程池（3个线程足够处理并发请求）
+        this.networkExecutor = Executors.newFixedThreadPool(3);
         loadUserFromPrefs();
     }
 
@@ -106,25 +114,10 @@ public class UserManager {
     }
 
     public void register(String username, String email, String password, @NonNull AuthCallback callback) {
-        new Thread(() -> {
-            Response response = null;
-            try {
-                JSONObject body = new JSONObject();
-                body.put("username", username);
-                body.put("email", email);
-                body.put("password", password);
-
-                RequestBody requestBody = RequestBody.create(
-                        body.toString(),
-                        MediaType.parse("application/json")
-                );
-
-                Request request = new Request.Builder()
-                        .url(Constants.API.BASE_URL + "/api/user/register")
-                        .post(requestBody)
-                        .build();
-
-                response = httpClient.newCall(request).execute();
+        networkExecutor.execute(() -> {
+            try (Response response = executeRegisterRequest(username, email, password)) {
+                if (response == null) return;
+                
                 String responseBody = response.body() != null ? response.body().string() : "";
 
                 if (!response.isSuccessful()) {
@@ -142,40 +135,41 @@ public class UserManager {
                     String errorMessage = jsonResponse.optString("message", "注册失败");
                     callback.onError(errorMessage);
                 }
-
             } catch (IOException e) {
                 Log.e(TAG, "Registration network error", e);
-                callback.onError("网络错误: " + e.getMessage());
+                callback.onError(ErrorHandler.handleNetworkError(e));
             } catch (JSONException e) {
                 Log.e(TAG, "Registration parse error", e);
                 callback.onError("解析服务器响应失败");
-            } finally {
-                if (response != null) {
-                    response.close();
-                }
             }
-        }).start();
+        });
+    }
+    
+    private Response executeRegisterRequest(String username, String email, String password) throws IOException, JSONException {
+        JSONObject body = new JSONObject();
+        body.put("username", username);
+        body.put("email", email);
+        body.put("password", password);
+
+        RequestBody requestBody = RequestBody.create(
+                body.toString(),
+                MediaType.parse("application/json")
+        );
+
+        Request request = new Request.Builder()
+                .url(Constants.API.BASE_URL + "/api/user/register")
+                .post(requestBody)
+                .build();
+
+        Response response = httpClient.newCall(request).execute();
+        return response;
     }
 
     public void login(String username, String password, @NonNull AuthCallback callback) {
-        new Thread(() -> {
-            Response response = null;
-            try {
-                JSONObject body = new JSONObject();
-                body.put("username", username);
-                body.put("password", password);
-
-                RequestBody requestBody = RequestBody.create(
-                        body.toString(),
-                        MediaType.parse("application/json")
-                );
-
-                Request request = new Request.Builder()
-                        .url(Constants.API.BASE_URL + "/api/user/login")
-                        .post(requestBody)
-                        .build();
-
-                response = httpClient.newCall(request).execute();
+        networkExecutor.execute(() -> {
+            try (Response response = executeLoginRequest(username, password)) {
+                if (response == null) return;
+                
                 String responseBody = response.body() != null ? response.body().string() : "";
 
                 if (!response.isSuccessful()) {
@@ -203,37 +197,35 @@ public class UserManager {
                     String errorMessage = jsonResponse.optString("message", "登录失败");
                     callback.onError(errorMessage);
                 }
-
             } catch (IOException e) {
                 Log.e(TAG, "Network error during login", e);
-                String errorMsg = "网络连接失败";
-                String message = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
-                
-                if (message.contains("failed to connect") || message.contains("refused")) {
-                    errorMsg = "无法连接到服务器，请检查网络或服务器状态";
-                } else if (message.contains("timeout")) {
-                    errorMsg = "连接超时，请重试";
-                } else if (message.contains("closed") || message.contains("end of stream")) {
-                    // "closed" is often an OkHttp internal state or server closing connection unexpectedly
-                    errorMsg = "连接被意外关闭，请重试";
-                } else if (message.contains("unknownhost")) {
-                    errorMsg = "无法解析服务器地址";
-                } else if (!message.isEmpty()) {
-                    errorMsg = "网络错误: " + e.getMessage();
-                }
-                callback.onError(errorMsg);
+                callback.onError(ErrorHandler.handleNetworkError(e));
             } catch (JSONException e) {
                 Log.e(TAG, "JSON parse error during login", e);
                 callback.onError("服务器响应格式错误");
             } catch (Exception e) {
                 Log.e(TAG, "Unexpected error during login", e);
                 callback.onError("登录异常: " + e.getMessage());
-            } finally {
-                if (response != null) {
-                    response.close();
-                }
             }
-        }).start();
+        });
+    }
+    
+    private Response executeLoginRequest(String username, String password) throws IOException, JSONException {
+        JSONObject body = new JSONObject();
+        body.put("username", username);
+        body.put("password", password);
+
+        RequestBody requestBody = RequestBody.create(
+                body.toString(),
+                MediaType.parse("application/json")
+        );
+
+        Request request = new Request.Builder()
+                .url(Constants.API.BASE_URL + "/api/user/login")
+                .post(requestBody)
+                .build();
+
+        return httpClient.newCall(request).execute();
     }
 
     public interface ProfileCallback {
@@ -247,16 +239,10 @@ public class UserManager {
             return;
         }
 
-        new Thread(() -> {
-            Response response = null;
-            try {
-                Request request = new Request.Builder()
-                        .url(Constants.API.BASE_URL + "/api/user/profile")
-                        .header("Authorization", "Bearer " + getToken())
-                        .get()
-                        .build();
-
-                response = httpClient.newCall(request).execute();
+        networkExecutor.execute(() -> {
+            try (Response response = executeGetProfileRequest()) {
+                if (response == null) return;
+                
                 String responseBody = response.body() != null ? response.body().string() : "";
 
                 if (!response.isSuccessful()) {
@@ -278,19 +264,24 @@ public class UserManager {
                     String errorMessage = jsonResponse.optString("message", "获取个人信息失败");
                     callback.onError(errorMessage);
                 }
-
             } catch (IOException e) {
                 Log.e(TAG, "Get profile network error", e);
-                callback.onError("网络错误: " + e.getMessage());
+                callback.onError(ErrorHandler.handleNetworkError(e));
             } catch (JSONException e) {
                 Log.e(TAG, "Get profile parse error", e);
                 callback.onError("解析服务器响应失败");
-            } finally {
-                if (response != null) {
-                    response.close();
-                }
             }
-        }).start();
+        });
+    }
+    
+    private Response executeGetProfileRequest() throws IOException {
+        Request request = new Request.Builder()
+                .url(Constants.API.BASE_URL + "/api/user/profile")
+                .header("Authorization", "Bearer " + getToken())
+                .get()
+                .build();
+
+        return httpClient.newCall(request).execute();
     }
 
     public interface UpdateCallback {
@@ -309,29 +300,10 @@ public class UserManager {
             return;
         }
 
-        new Thread(() -> {
-            Response response = null;
-            try {
-                Log.d(TAG, "Uploading avatar, base64 length: " + base64Image.length());
+        networkExecutor.execute(() -> {
+            try (Response response = executeUploadAvatarRequest(base64Image)) {
+                if (response == null) return;
                 
-                JSONObject body = new JSONObject();
-                body.put("image", base64Image);
-
-                RequestBody requestBody = RequestBody.create(
-                        body.toString(),
-                        MediaType.parse("application/json")
-                );
-
-                String url = Constants.API.BASE_URL + "/api/user/upload-avatar";
-                Log.d(TAG, "Upload URL: " + url);
-
-                Request request = new Request.Builder()
-                        .url(url)
-                        .header("Authorization", "Bearer " + getToken())
-                        .post(requestBody)
-                        .build();
-
-                response = httpClient.newCall(request).execute();
                 String responseBody = response.body() != null ? response.body().string() : "";
                 
                 Log.d(TAG, "Upload response code: " + response.code());
@@ -356,25 +328,35 @@ public class UserManager {
                 }
             } catch (IOException e) {
                 Log.e(TAG, "Upload avatar IO error", e);
-                String errorMsg = "网络错误";
-                String message = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
-                if (message.contains("failed to connect") || message.contains("refused")) {
-                    errorMsg = "无法连接到服务器";
-                } else if (message.contains("timeout")) {
-                    errorMsg = "连接超时";
-                } else if (message.contains("closed")) {
-                    errorMsg = "连接被关闭";
-                } else if (!message.isEmpty()) {
-                    errorMsg = "网络错误: " + e.getMessage();
-                }
-                callback.onError(errorMsg);
+                callback.onError(ErrorHandler.handleNetworkError(e));
             } catch (JSONException e) {
                 Log.e(TAG, "Upload avatar JSON error", e);
                 callback.onError("服务器响应格式错误");
-            } finally {
-                if (response != null) response.close();
             }
-        }).start();
+        });
+    }
+    
+    private Response executeUploadAvatarRequest(String base64Image) throws IOException, JSONException {
+        Log.d(TAG, "Uploading avatar, base64 length: " + base64Image.length());
+        
+        JSONObject body = new JSONObject();
+        body.put("image", base64Image);
+
+        RequestBody requestBody = RequestBody.create(
+                body.toString(),
+                MediaType.parse("application/json")
+        );
+
+        String url = Constants.API.BASE_URL + "/api/user/upload-avatar";
+        Log.d(TAG, "Upload URL: " + url);
+
+        Request request = new Request.Builder()
+                .url(url)
+                .header("Authorization", "Bearer " + getToken())
+                .post(requestBody)
+                .build();
+
+        return httpClient.newCall(request).execute();
     }
 
     public void updateProfile(String nickname, String phone, String gender, String birthday, String avatar, String email, @NonNull UpdateCallback callback) {
@@ -576,13 +558,22 @@ public class UserManager {
         // 清理头像更新时间缓存
         context.getSharedPreferences("avatar_prefs", Context.MODE_PRIVATE).edit().clear().apply();
         
-        // 清理数据库和文件缓存
+        // 清理临时缓存（保留用户的个人数据：最近播放、收藏）
         new Thread(() -> {
             AppDatabase db = AppDatabase.getInstance(context);
-            db.recentPlayDao().deleteAll();
+            // ❌ 已移除：不再清空最近播放记录（db.recentPlayDao().deleteAll()）
+            // 原因：这是用户的个人数据，重新登录后应该保留
+            
+            // ✅ 保留：只删除远程歌曲（需要重新从服务器获取）
             db.songDao().deleteRemoteSongs();
-            db.songDao().clearFavorites();
+            
+            // ❌ 已移除：不再清空收藏数据（db.songDao().clearFavorites()）
+            // 原因：收藏是用户的个人偏好，跨登录会话应保持一致
+            
+            // ✅ 保留：清理歌词缓存（可按需重新下载）
             LyricCacheManager.getInstance(context).clearCache();
+            
+            Log.d(TAG, "Logout completed: cleared temporary cache, preserved user data");
         }).start();
     }
 

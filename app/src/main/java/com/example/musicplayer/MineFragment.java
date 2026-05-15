@@ -88,7 +88,7 @@ public class MineFragment extends Fragment {
                 startActivity(intent);
             });
             // 清除旧的头像
-            profileImage.setImageResource(R.drawable.music);
+            profileImage.setImageResource(R.drawable.ic_default_avatar);
         }
     }
 
@@ -97,6 +97,16 @@ public class MineFragment extends Fragment {
         super.onResume();
         viewModel.refreshProfile(); // 确保从本地/内存同步最新数据
         updateLoginState();
+        
+        // 检查是否需要重新同步数据（解决重新登录后收藏不显示的问题）
+        if (viewModel != null) {
+            Boolean synced = viewModel.isDataSynced().getValue();
+            if (synced == null || !synced) {
+                // 数据未同步或标记为未完成，触发同步
+                android.util.Log.d("MineFragment", "Triggering data sync on resume");
+                viewModel.syncAllSongs();
+            }
+        }
     }
     
     private void refreshUserInfo() {
@@ -214,8 +224,8 @@ public class MineFragment extends Fragment {
             ImageRequest request = new ImageRequest.Builder(requireContext())
                     .data(finalAvatarUrl)
                     .target(profileImage)
-                    .placeholder(R.drawable.music)
-                    .error(R.drawable.music)
+                    .placeholder(R.drawable.ic_default_avatar)
+                    .error(R.drawable.ic_default_avatar)
                     .crossfade(true)
                     .build();
             Coil.imageLoader(requireContext()).enqueue(request);

@@ -35,10 +35,8 @@ public class DownloadManager {
     private DownloadManager(Context context) {
         this.context = context.getApplicationContext();
         this.executorService = Executors.newFixedThreadPool(3);
-        this.client = new OkHttpClient.Builder()
-            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .build();
+        // 复用全局HttpClient单例，共享连接池和配置
+        this.client = HttpClient.getInstance();
         this.mainHandler = new Handler(Looper.getMainLooper());
         this.notificationManager = new DownloadNotificationManager(context);
     }

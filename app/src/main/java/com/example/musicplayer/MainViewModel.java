@@ -39,8 +39,9 @@ public class MainViewModel extends AndroidViewModel {
 
     // 控制请求
     private final MutableLiveData<Long> seekToPosition = new MutableLiveData<>(-1L);
-    private final MutableLiveData<Boolean> nextRequest = new MutableLiveData<>();
-    private final MutableLiveData<Boolean> prevRequest = new MutableLiveData<>();
+    private final MutableLiveData<Integer> togglePlaybackRequest = new MutableLiveData<>(0);
+    private final MutableLiveData<Integer> nextRequest = new MutableLiveData<>(0);
+    private final MutableLiveData<Integer> prevRequest = new MutableLiveData<>(0);
 
     // 用户资料
     private final MutableLiveData<String> userNickname = new MutableLiveData<>();
@@ -49,6 +50,10 @@ public class MainViewModel extends AndroidViewModel {
     private final MutableLiveData<String> userGender = new MutableLiveData<>();
     private final MutableLiveData<String> userBirthday = new MutableLiveData<>();
     private final MutableLiveData<String> userAvatarUri = new MutableLiveData<>();
+
+    // 数据同步状态（用于解决重新登录后收藏数据不显示的问题）
+    private final MutableLiveData<Boolean> isDataSynced = new MutableLiveData<>(false);
+    private volatile boolean syncInProgress = false;
 
     public MainViewModel(@NonNull Application application) {
         super(application);
@@ -73,8 +78,9 @@ public class MainViewModel extends AndroidViewModel {
     public LiveData<List<LyricEntry>> getLyrics() { return lyrics; }
     public LiveData<String> getCurrentLyric() { return currentLyric; }
     public LiveData<Long> getSeekToPosition() { return seekToPosition; }
-    public LiveData<Boolean> getNextRequest() { return nextRequest; }
-    public LiveData<Boolean> getPrevRequest() { return prevRequest; }
+    public LiveData<Integer> getTogglePlaybackRequest() { return togglePlaybackRequest; }
+    public LiveData<Integer> getNextRequest() { return nextRequest; }
+    public LiveData<Integer> getPrevRequest() { return prevRequest; }
     public LiveData<String> getUserNickname() { return userNickname; }
     public LiveData<String> getUserSignature() { return userSignature; }
     public LiveData<String> getUserId() { return userId; }
@@ -90,6 +96,10 @@ public class MainViewModel extends AndroidViewModel {
         return recentPlayDao.getRecentCount(System.currentTimeMillis() - 604800000L); 
     }
     public LiveData<Integer> getTotalPlayCount() { return recentPlayDao.getTotalPlayCount(); }
+    
+    // --- 数据同步状态 ---
+    public LiveData<Boolean> isDataSynced() { return isDataSynced; }
+    public boolean isSyncInProgress() { return syncInProgress; }
 
     // --- 列表查询 ---
     public LiveData<List<Song>> getLocalSongs() { return songDao.getLocalSongs(); }
@@ -112,8 +122,21 @@ public class MainViewModel extends AndroidViewModel {
     public void setCurrentLyric(String text) { currentLyric.postValue(text); }
     public void setSeekToPosition(long pos) { seekToPosition.setValue(pos); }
     public void clearSeek() { seekToPosition.setValue(-1L); }
-    public void playNext() { nextRequest.setValue(true); }
-    public void playPrevious() { prevRequest.setValue(true); }
+    public void requestTogglePlayback() {
+        Integer current = togglePlaybackRequest.getValue();
+        togglePlaybackRequest.setValue(current == null ? 1 : current + 1);
+    }
+    public void consumeTogglePlaybackRequest() { togglePlaybackRequest.setValue(0); }
+    public void playNext() {
+        Integer current = nextRequest.getValue();
+        nextRequest.setValue(current == null ? 1 : current + 1);
+    }
+    public void clearNextRequest() { nextRequest.setValue(0); }
+    public void playPrevious() {
+        Integer current = prevRequest.getValue();
+        prevRequest.setValue(current == null ? 1 : current + 1);
+    }
+    public void clearPrevRequest() { prevRequest.setValue(0); }
     
     public void toggleLoopMode() {
         int nextMode = (loopMode.getValue() != null ? loopMode.getValue() + 1 : 1) % 2;
@@ -162,6 +185,8 @@ public class MainViewModel extends AndroidViewModel {
 
     // --- 网络同步与缓存 ---
     public void fetchRemoteSongs() {
+        syncInProgress = true;
+        isDataSynced.setValue(false);
         executorService.execute(() -> {
             try {
                 android.util.Log.d("MainViewModel", "Fetching from: " + BASE_URL);
@@ -179,11 +204,20 @@ public class MainViewModel extends AndroidViewModel {
                         }
                     }
                 }
-            } catch (Exception e) { android.util.Log.e("MainViewModel", "Fetch failed", e); }
+                // 标记同步完成
+                syncInProgress = false;
+                isDataSynced.postValue(true);
+            } catch (Exception e) { 
+                android.util.Log.e("MainViewModel", "Fetch failed", e); 
+                syncInProgress = false;
+                isDataSynced.postValue(false);
+            }
         });
     }
 
     public void syncAllSongs() {
+        syncInProgress = true;
+        isDataSynced.setValue(false);
         executorService.execute(() -> {
             try {
                 okhttp3.OkHttpClient client = HttpClient.getInstance();
@@ -205,7 +239,11 @@ public class MainViewModel extends AndroidViewModel {
                         }
                     }
                 }
-            } catch (Exception e) { android.util.Log.e("MainViewModel", "Sync failed", e); }
+            } catch (Exception e) { 
+                android.util.Log.e("MainViewModel", "Sync failed", e); 
+                syncInProgress = false;
+                isDataSynced.postValue(false);
+            }
         });
     }
 

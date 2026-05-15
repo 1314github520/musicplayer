@@ -6,6 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/bg_dark"
     android:padding="20dp"
+    android:paddingBottom="100dp"
     android:fitsSystemWindows="true">
 
     <androidx.cardview.widget.CardView
@@ -27,7 +28,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="登录/注册"
-                android:textColor="@color/white"
+                android:textColor="#FFFFFF"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:background="@drawable/button_bg"
@@ -78,7 +79,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="音乐爱好者"
-                            android:textColor="@color/white"
+                            android:textColor="@color/text_primary"
                             android:textSize="18sp"
                             android:textStyle="bold" />
 
@@ -111,7 +112,7 @@
                         android:paddingHorizontal="12dp"
                         android:paddingVertical="4dp"
                         android:text="@string/edit_profile"
-                        android:textColor="@color/white"
+                        android:textColor="#FFFFFF"
                         android:textSize="12sp" />
                 </LinearLayout>
 
@@ -135,7 +136,7 @@
                         android:layout_width="14dp"
                         android:layout_height="14dp"
                         android:src="@android:drawable/ic_menu_myplaces"
-                        android:tint="@color/text_grey" />
+                        app:tint="@color/text_grey" />
 
                     <TextView
                         android:id="@+id/tvUserId"
@@ -156,7 +157,7 @@
                         android:layout_width="14dp"
                         android:layout_height="14dp"
                         android:src="@android:drawable/ic_menu_info_details"
-                        android:tint="@color/text_grey" />
+                        app:tint="@color/text_grey" />
 
                     <TextView
                         android:id="@+id/tvGender"
@@ -177,7 +178,7 @@
                         android:layout_width="14dp"
                         android:layout_height="14dp"
                         android:src="@android:drawable/ic_menu_my_calendar"
-                        android:tint="@color/text_grey" />
+                        app:tint="@color/text_grey" />
 
                     <TextView
                         android:id="@+id/tvBirthday"
@@ -245,7 +246,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="@string/my_collection"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
                 <View
@@ -291,7 +292,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="@string/recent_played"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
                 <View
@@ -337,7 +338,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="@string/local_download"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
                 <View
@@ -383,7 +384,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="@string/import_music"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
                 <View
@@ -433,7 +434,7 @@
                 android:layout_weight="1"
                 android:layout_marginStart="16dp"
                 android:text="设置"
-                android:textColor="@color/white"
+                android:textColor="@color/text_primary"
                 android:textSize="16sp" />
 
             <ImageView
@@ -475,7 +476,7 @@
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="6dp"
                 android:text="愿音乐治愈你 ✨"
-                android:textColor="@color/white"
+                android:textColor="@color/text_primary"
                 android:textSize="11sp" />
         </androidx.cardview.widget.CardView>
 

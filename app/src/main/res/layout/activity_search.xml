@@ -21,7 +21,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@android:drawable/ic_menu_close_clear_cancel"
-            app:tint="@color/white"
+            app:tint="@color/text_primary"
             android:contentDescription="@null"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
@@ -57,7 +57,7 @@
                 android:layout_weight="1"
                 android:background="@null"
                 android:hint="搜索歌曲、歌手"
-                android:textColor="@color/white"
+                android:textColor="@color/text_primary"
                 android:textColorHint="@color/text_grey"
                 android:textSize="14sp"
                 android:imeOptions="actionSearch"
@@ -139,7 +139,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="历史搜索"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
 
@@ -151,7 +151,7 @@
                     android:layout_centerVertical="true"
                     android:src="@android:drawable/ic_menu_delete"
                     android:alpha="0.6"
-                    app:tint="@color/white" />
+                    app:tint="@color/text_primary" />
             </RelativeLayout>
 
             <com.google.android.material.chip.ChipGroup
@@ -172,7 +172,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="热门搜索"
-                    android:textColor="@color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
 
@@ -183,7 +183,7 @@
                     android:layout_centerVertical="true"
                     android:src="@android:drawable/ic_menu_rotate"
                     android:alpha="0.6"
-                    app:tint="@color/white" />
+                    app:tint="@color/text_primary" />
             </RelativeLayout>
 
             <com.google.android.material.chip.ChipGroup
