@@ -1,5 +1,8 @@
 package com.example.musicplayer;
 
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -7,20 +10,37 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
-
-import android.text.Spannable;
-import android.text.SpannableString;
-import android.text.style.ForegroundColorSpan;
-
-import com.example.musicplayer.R;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
-public class SearchResultAdapter extends RecyclerView.Adapter<SearchResultAdapter.ViewHolder> {
+public class SearchResultAdapter extends ListAdapter<Song, SearchResultAdapter.ViewHolder> {
+    private static final DiffUtil.ItemCallback<Song> DIFF_CALLBACK = new DiffUtil.ItemCallback<Song>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Song oldItem, @NonNull Song newItem) {
+            return oldItem.id == newItem.id;
+        }
 
-    private List<Song> songs = new ArrayList<>();
+        @Override
+        public boolean areContentsTheSame(@NonNull Song oldItem, @NonNull Song newItem) {
+            return oldItem.duration == newItem.duration
+                    && oldItem.isLocal == newItem.isLocal
+                    && oldItem.isFavorite == newItem.isFavorite
+                    && Objects.equals(oldItem.title, newItem.title)
+                    && Objects.equals(oldItem.artist, newItem.artist)
+                    && Objects.equals(oldItem.singer, newItem.singer)
+                    && Objects.equals(oldItem.path, newItem.path)
+                    && Objects.equals(oldItem.coverUrl, newItem.coverUrl)
+                    && Objects.equals(oldItem.album, newItem.album)
+                    && Objects.equals(oldItem.lrcId, newItem.lrcId)
+                    && Objects.equals(oldItem.lyrics, newItem.lyrics);
+        }
+    };
+
     private String searchQuery = "";
     private int currentPlayingId = -1;
     private final OnSongClickListener listener;
@@ -30,18 +50,35 @@ public class SearchResultAdapter extends RecyclerView.Adapter<SearchResultAdapte
     }
 
     public SearchResultAdapter(OnSongClickListener listener) {
+        super(DIFF_CALLBACK);
         this.listener = listener;
     }
 
     public void setSongs(List<Song> songs, String query) {
-        this.songs = songs;
-        this.searchQuery = query != null ? query : "";
-        notifyDataSetChanged();
+        String newQuery = query != null ? query : "";
+        boolean queryChanged = !Objects.equals(this.searchQuery, newQuery);
+        this.searchQuery = newQuery;
+        List<Song> newList = songs == null ? new ArrayList<>() : new ArrayList<>(songs);
+        submitList(newList, () -> {
+            if (queryChanged && getItemCount() > 0) {
+                notifyItemRangeChanged(0, getItemCount());
+            }
+        });
     }
 
     public void setCurrentPlayingId(int songId) {
+        if (currentPlayingId == songId) {
+            return;
+        }
+        int previousPosition = findPositionBySongId(currentPlayingId);
         this.currentPlayingId = songId;
-        notifyDataSetChanged();
+        int currentPosition = findPositionBySongId(songId);
+        if (previousPosition >= 0) {
+            notifyItemChanged(previousPosition);
+        }
+        if (currentPosition >= 0) {
+            notifyItemChanged(currentPosition);
+        }
     }
 
     @NonNull
@@ -53,7 +90,7 @@ public class SearchResultAdapter extends RecyclerView.Adapter<SearchResultAdapte
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Song song = songs.get(position);
+        Song song = getItem(position);
         
         boolean isCurrent = song.id == currentPlayingId;
         int activeColor = 0xFF1DB954; // Spotify Green
@@ -127,22 +164,33 @@ public class SearchResultAdapter extends RecyclerView.Adapter<SearchResultAdapte
     }
 
     private CharSequence getHighlightedText(String text, String query) {
-        if (query.isEmpty() || !text.toLowerCase().contains(query.toLowerCase())) {
-            return text;
+        String safeText = text != null ? text : "";
+        if (query.isEmpty() || !safeText.toLowerCase().contains(query.toLowerCase())) {
+            return safeText;
         }
-        SpannableString spannable = new SpannableString(text);
-        int start = text.toLowerCase().indexOf(query.toLowerCase());
+        SpannableString spannable = new SpannableString(safeText);
+        String lowerText = safeText.toLowerCase();
+        String lowerQuery = query.toLowerCase();
+        int start = lowerText.indexOf(lowerQuery);
         while (start >= 0) {
             int end = start + query.length();
             spannable.setSpan(new ForegroundColorSpan(0xFF26D1D1), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-            start = text.toLowerCase().indexOf(query.toLowerCase(), end);
+            start = lowerText.indexOf(lowerQuery, end);
         }
         return spannable;
     }
 
-    @Override
-    public int getItemCount() {
-        return songs.size();
+    private int findPositionBySongId(int songId) {
+        if (songId == -1) {
+            return -1;
+        }
+        List<Song> currentList = getCurrentList();
+        for (int i = 0; i < currentList.size(); i++) {
+            if (currentList.get(i).id == songId) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {

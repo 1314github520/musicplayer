@@ -1,9 +1,18 @@
 package com.example.musicplayer;
 
 import androidx.room.Entity;
+import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
-@Entity(tableName = "songs")
+@Entity(
+        tableName = "songs",
+        indices = {
+                @Index("isLocal"),
+                @Index("isFavorite"),
+                @Index("lrcId"),
+                @Index("path")
+        }
+)
 public class Song {
     @PrimaryKey(autoGenerate = true)
     public int id;

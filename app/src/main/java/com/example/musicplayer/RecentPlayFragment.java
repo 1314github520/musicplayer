@@ -35,37 +35,38 @@ public class RecentPlayFragment extends Fragment {
         view.findViewById(R.id.btnBack).setOnClickListener(v -> requireActivity().onBackPressed());
         
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+
+        adapter = new SongAdapter(new java.util.ArrayList<>(), (song, position) -> {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).playSongList(adapter.getData(), position);
+            }
+        });
+        
+        // 设置删除按钮点击监听
+        adapter.setOnDeleteClickListener(song -> {
+            new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle("删除确认")
+                    .setMessage("确定要从最近播放中删除 \"" + song.title + "\" 吗？")
+                    .setPositiveButton("删除", (dialog, which) -> {
+                        viewModel.deleteRecentPlay(song.id);
+                        ToastHelper.showShort(getContext(), "已删除: " + song.title);
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+        });
+        
+        // 设置下载按钮点击监听
+        adapter.setOnDownloadClickListener(song -> {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).downloadSong(song);
+            }
+        });
+        recyclerView.setAdapter(adapter);
         
         viewModel.getRecentSongs().observe(getViewLifecycleOwner(), songs -> {
             if (songs != null) {
                 tvSongCount.setText(songs.size() + "首歌曲");
-                adapter = new SongAdapter(songs, (song, position) -> {
-                    if (getActivity() instanceof MainActivity) {
-                        ((MainActivity) getActivity()).playSongList(songs, position);
-                    }
-                });
-                
-                // 设置删除按钮点击监听
-                adapter.setOnDeleteClickListener(song -> {
-                    new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                            .setTitle("删除确认")
-                            .setMessage("确定要从最近播放中删除 \"" + song.title + "\" 吗？")
-                            .setPositiveButton("删除", (dialog, which) -> {
-                                viewModel.deleteRecentPlay(song.id);
-                                ToastHelper.showShort(getContext(), "已删除: " + song.title);
-                            })
-                            .setNegativeButton("取消", null)
-                            .show();
-                });
-                
-                // 设置下载按钮点击监听
-                adapter.setOnDownloadClickListener(song -> {
-                    if (getActivity() instanceof MainActivity) {
-                        ((MainActivity) getActivity()).downloadSong(song);
-                    }
-                });
-                
-                recyclerView.setAdapter(adapter);
+                adapter.updateData(songs);
             }
         });
 

@@ -15,8 +15,8 @@ import java.util.concurrent.Executors;
 public class MainViewModel extends AndroidViewModel {
     public static final String BASE_URL = "http://8.162.14.195:3000";
 
-    private final SongDao songDao;
-    private final RecentPlayDao recentPlayDao;
+    private SongDao songDao;
+    private RecentPlayDao recentPlayDao;
     public ExecutorService executorService = Executors.newFixedThreadPool(4);
 
     // 音乐列表数据
@@ -54,14 +54,18 @@ public class MainViewModel extends AndroidViewModel {
     // 数据同步状态（用于解决重新登录后收藏数据不显示的问题）
     private final MutableLiveData<Boolean> isDataSynced = new MutableLiveData<>(false);
     private volatile boolean syncInProgress = false;
+    private volatile boolean networkSyncCompleted = false; // 标记网络同步是否已完成，防止本地数据覆盖网络数据
 
     public MainViewModel(@NonNull Application application) {
         super(application);
-        AppDatabase db = AppDatabase.getInstance(application);
-        songDao = db.songDao();
-        recentPlayDao = db.recentPlayDao();
-        refreshProfile();
-        fetchRemoteSongs();
+        try {
+            AppDatabase db = AppDatabase.getInstance(application);
+            songDao = db.songDao();
+            recentPlayDao = db.recentPlayDao();
+            refreshProfile();
+        } catch (Exception e) {
+            android.util.Log.e("MainViewModel", "初始化数据库失败", e);
+        }
     }
 
     // --- Getter 方法 ---
@@ -199,8 +203,8 @@ public class MainViewModel extends AndroidViewModel {
                         ApiResponse<List<RemoteSong>> apiResponse = new com.google.gson.Gson().fromJson(json, type);
                         if (apiResponse != null && apiResponse.data != null) {
                             List<Song> songs = convertToSongs(apiResponse.data);
+                            songDao.mergeRemoteSongs(songs);
                             remoteSongs.postValue(songs);
-                            songDao.insertSongs(songs);
                         }
                     }
                 }
@@ -218,8 +222,32 @@ public class MainViewModel extends AndroidViewModel {
     public void syncAllSongs() {
         syncInProgress = true;
         isDataSynced.setValue(false);
+        networkSyncCompleted = false; // 重置标志
+        
+        // 第1步：先立即加载本地数据到UI，避免白屏
         executorService.execute(() -> {
             try {
+                android.util.Log.d("MainViewModel", "syncAllSongs - 第1步：加载本地数据");
+                List<Song> localSongs = songDao.getAllSongsSync();
+                if (localSongs != null && !localSongs.isEmpty()) {
+                    android.util.Log.d("MainViewModel", "本地数据库有 " + localSongs.size() + " 首歌曲，先显示到UI");
+                    // 只有在网络同步未完成时才更新UI，防止覆盖新数据
+                    if (!networkSyncCompleted) {
+                        android.util.Log.d("MainViewModel", "第1步 - 网络未完成，更新UI: " + localSongs.size() + " 首");
+                        remoteSongs.postValue(localSongs);
+                    } else {
+                        android.util.Log.d("MainViewModel", "第1步 - 网络已完成，跳过更新，避免覆盖");
+                    }
+                }
+            } catch (Exception e) {
+                android.util.Log.e("MainViewModel", "加载本地数据失败", e);
+            }
+        });
+        
+        // 第2步：后台同步网络数据
+        executorService.execute(() -> {
+            try {
+                android.util.Log.d("MainViewModel", "syncAllSongs - 第2步：同步网络数据");
                 okhttp3.OkHttpClient client = HttpClient.getInstance();
                 okhttp3.Request request = new okhttp3.Request.Builder().url(BASE_URL + "/api/songs/all").build();
                 try (okhttp3.Response response = client.newCall(request).execute()) {
@@ -228,17 +256,20 @@ public class MainViewModel extends AndroidViewModel {
                         java.lang.reflect.Type type = new com.google.gson.reflect.TypeToken<ApiResponse<List<RemoteSong>>>(){}.getType();
                         ApiResponse<List<RemoteSong>> apiResponse = new com.google.gson.Gson().fromJson(json, type);
                         if (apiResponse != null && apiResponse.data != null) {
+                            android.util.Log.d("MainViewModel", "syncAllSongs - 收到网络数据: " + apiResponse.data.size() + " 首");
                             List<Song> songs = convertToSongs(apiResponse.data);
-                            songDao.insertSongs(songs); // 先插入
-                            for (RemoteSong rs : apiResponse.data) {
-                                String photoUrl = rs.photo != null ? rs.photo.trim() : null;
-                                if (photoUrl != null && photoUrl.startsWith("/")) photoUrl = BASE_URL + photoUrl;
-                                songDao.updateSongInfo(rs.id, rs.title, rs.artist, rs.singer, photoUrl, rs.album, rs.duration);
-                            }
-                            fetchRemoteSongs();
+                            android.util.Log.d("MainViewModel", "syncAllSongs - 转换后歌曲数: " + songs.size() + " 首");
+                            songDao.mergeRemoteSongs(songs);
+                            // 标记网络同步完成
+                            networkSyncCompleted = true;
+                            android.util.Log.d("MainViewModel", "网络数据同步完成，更新UI");
+                            android.util.Log.d("MainViewModel", "syncAllSongs - 发送到UI的歌曲数: " + songs.size() + " 首");
+                            remoteSongs.postValue(songs); // 更新UI显示最新数据
                         }
                     }
                 }
+                syncInProgress = false;
+                isDataSynced.postValue(true);
             } catch (Exception e) { 
                 android.util.Log.e("MainViewModel", "Sync failed", e); 
                 syncInProgress = false;
@@ -274,6 +305,11 @@ public class MainViewModel extends AndroidViewModel {
             s.duration = rs.duration;
             s.lrcId = rs.lrc_id;
             songs.add(s);
+        }
+        android.util.Log.d("MainViewModel", "convertToSongs - 转换完成，共 " + songs.size() + " 首");
+        if (!songs.isEmpty()) {
+            android.util.Log.d("MainViewModel", "第一首: id=" + songs.get(0).id + " title=" + songs.get(0).title);
+            android.util.Log.d("MainViewModel", "最后一首: id=" + songs.get(songs.size()-1).id + " title=" + songs.get(songs.size()-1).title);
         }
         return songs;
     }

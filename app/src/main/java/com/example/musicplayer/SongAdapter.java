@@ -5,21 +5,44 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.musicplayer.R;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
+import androidx.recyclerview.widget.RecyclerView;
 
 import coil.Coil;
 import coil.request.ImageRequest;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
-public class SongAdapter extends RecyclerView.Adapter<SongAdapter.ViewHolder> {
+public class SongAdapter extends ListAdapter<Song, SongAdapter.ViewHolder> {
+    private static final DiffUtil.ItemCallback<Song> DIFF_CALLBACK = new DiffUtil.ItemCallback<Song>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Song oldItem, @NonNull Song newItem) {
+            return oldItem.id == newItem.id;
+        }
 
-    private List<Song> songs;
-    private OnSongClickListener listener;
+        @Override
+        public boolean areContentsTheSame(@NonNull Song oldItem, @NonNull Song newItem) {
+            return oldItem.duration == newItem.duration
+                    && oldItem.isLocal == newItem.isLocal
+                    && oldItem.isFavorite == newItem.isFavorite
+                    && Objects.equals(oldItem.title, newItem.title)
+                    && Objects.equals(oldItem.artist, newItem.artist)
+                    && Objects.equals(oldItem.singer, newItem.singer)
+                    && Objects.equals(oldItem.path, newItem.path)
+                    && Objects.equals(oldItem.coverUrl, newItem.coverUrl)
+                    && Objects.equals(oldItem.album, newItem.album)
+                    && Objects.equals(oldItem.lrcId, newItem.lrcId)
+                    && Objects.equals(oldItem.lyrics, newItem.lyrics);
+        }
+    };
+
+    private final OnSongClickListener listener;
     private boolean isEditMode = false;
-    private java.util.Set<Integer> selectedSongs = new java.util.HashSet<>();
+    private final java.util.Set<Integer> selectedSongs = new java.util.HashSet<>();
 
     public interface OnSongClickListener {
         void onSongClick(Song song, int position);
@@ -34,8 +57,9 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.ViewHolder> {
     }
 
     public SongAdapter(List<Song> songs, OnSongClickListener listener) {
-        this.songs = songs;
+        super(DIFF_CALLBACK);
         this.listener = listener;
+        updateData(songs);
     }
 
     private OnDeleteClickListener deleteListener;
@@ -61,7 +85,7 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.ViewHolder> {
 
     public List<Song> getSelectedSongs() {
         List<Song> selectedList = new java.util.ArrayList<>();
-        for (Song song : songs) {
+        for (Song song : getCurrentList()) {
             if (selectedSongs.contains(song.id)) {
                 selectedList.add(song);
             }
@@ -73,15 +97,15 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.ViewHolder> {
      * 获取当前数据列表
      */
     public List<Song> getData() {
-        return songs;
+        return new ArrayList<>(getCurrentList());
     }
 
     /**
      * 更新数据列表（用于LiveData观察时更新，避免重建Adapter）
      */
     public void updateData(List<Song> newSongs) {
-        this.songs = newSongs;
-        notifyDataSetChanged();
+        List<Song> updatedSongs = newSongs == null ? new ArrayList<>() : new ArrayList<>(newSongs);
+        submitList(updatedSongs, this::syncSelectedSongs);
     }
 
     @NonNull
@@ -93,7 +117,7 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.ViewHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Song song = songs.get(position);
+        Song song = getItem(position);
         holder.title.setText(song.title);
         // 显示歌手而不是作曲家
         holder.artist.setText(song.singer != null ? song.singer : song.artist);
@@ -182,7 +206,15 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.ViewHolder> {
 
     @Override
     public int getItemCount() {
-        return songs != null ? songs.size() : 0;
+        return getCurrentList().size();
+    }
+
+    private void syncSelectedSongs() {
+        java.util.Set<Integer> validSongIds = new java.util.HashSet<>();
+        for (Song song : getCurrentList()) {
+            validSongIds.add(song.id);
+        }
+        selectedSongs.retainAll(validSongIds);
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {

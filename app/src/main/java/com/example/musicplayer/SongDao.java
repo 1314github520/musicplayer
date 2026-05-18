@@ -5,6 +5,7 @@ import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.Transaction;
 import androidx.room.Update;
 
 import java.util.List;
@@ -35,11 +36,23 @@ public interface SongDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insert(Song song);
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertSongs(List<Song> songs);
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    void insertSongsIgnore(List<Song> songs);
     
-    @Query("UPDATE songs SET title = :title, artist = :artist, singer = :singer, coverUrl = :coverUrl, album = :album, duration = :duration WHERE id = :id")
-    void updateSongInfo(int id, String title, String artist, String singer, String coverUrl, String album, int duration);
+    @Query("UPDATE songs SET " +
+            "title = :title, " +
+            "artist = :artist, " +
+            "singer = :singer, " +
+            "coverUrl = :coverUrl, " +
+            "album = :album, " +
+            "duration = :duration, " +
+            "lrcId = :lrcId, " +
+            "path = CASE WHEN isLocal = 1 THEN path ELSE :path END " +
+            "WHERE id = :id")
+    void updateRemoteSongFields(int id, String title, String artist, String singer, String coverUrl, String album, int duration, Long lrcId, String path);
 
     @Update
     void updateSong(Song song);
@@ -69,8 +82,38 @@ public interface SongDao {
            "ORDER BY id DESC")
     List<Song> searchSongsLocal(String searchPattern);
 
-    @Query("DELETE FROM songs WHERE isLocal = 0")
+    @Query("DELETE FROM songs WHERE isLocal = 0 AND isFavorite = 0")
     void deleteRemoteSongs();
+
+    @Query("DELETE FROM songs WHERE isLocal = 0 AND isFavorite = 0 AND id NOT IN (:remoteIds)")
+    void deleteRemoteSongsNotIn(List<Integer> remoteIds);
+
+    @Transaction
+    default void mergeRemoteSongs(List<Song> songs) {
+        if (songs == null || songs.isEmpty()) {
+            return;
+        }
+        insertSongsIgnore(songs);
+        java.util.List<Integer> remoteIds = new java.util.ArrayList<>(songs.size());
+        for (Song song : songs) {
+            if (song == null) {
+                continue;
+            }
+            remoteIds.add(song.id);
+            updateRemoteSongFields(
+                    song.id,
+                    song.title,
+                    song.artist,
+                    song.singer,
+                    song.coverUrl,
+                    song.album,
+                    song.duration,
+                    song.lrcId,
+                    song.path
+            );
+        }
+        deleteRemoteSongsNotIn(remoteIds);
+    }
 
     @Query("UPDATE songs SET isFavorite = 0")
     void clearFavorites();

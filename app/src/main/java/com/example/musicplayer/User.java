@@ -41,10 +41,26 @@ public class User {
         user.setPhone(getOptString(json, "phone"));
         user.setGender(getOptString(json, "gender"));
         user.setBirthday(getOptString(json, "birthday"));
-        user.setToken(getOptString(json, "token"));
+        
+        String token = getOptString(json, "token");
+        if (token.isEmpty()) {
+            token = getOptString(json, "accessToken");
+            android.util.Log.w("User", "token字段为空, 尝试读取accessToken: " + 
+                              (token.isEmpty() ? "未找到" : "找到"));
+        }
+        if (token.isEmpty()) {
+            android.util.Log.w("User", "警告: JSON中未找到有效的token字段! 可用的keys: " + json.keys());
+        }
+        user.setToken(token);
+        
         if (json.has("createdAt")) {
             user.setCreatedAt(json.getLong("createdAt"));
         }
+        
+        android.util.Log.d("User", "解析用户数据: userId=" + user.getUserId() + 
+                           ", username=" + user.getUsername() + 
+                           ", token长度=" + token.length());
+        
         return user;
     }
 

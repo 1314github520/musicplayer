@@ -36,24 +36,24 @@ public class ImportedMusicFragment extends Fragment {
             }
         });
 
+        adapter = new SongAdapter(new java.util.ArrayList<>(), (song, position) -> {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).playSongList(adapter.getData(), position);
+            }
+        });
+        adapter.setOnDeleteClickListener(song -> {
+            new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle("删除确认")
+                    .setMessage("确定要删除这首歌吗？")
+                    .setPositiveButton("删除", (dialog, which) -> viewModel.deleteSong(song))
+                    .setNegativeButton("取消", null)
+                    .show();
+        });
+        recyclerView.setAdapter(adapter);
+
         viewModel.getImportedSongs().observe(getViewLifecycleOwner(), songs -> {
             if (songs != null) {
-                adapter = new SongAdapter(songs, (song, position) -> {
-                    if (getActivity() instanceof MainActivity) {
-                        ((MainActivity) getActivity()).playSongList(songs, position);
-                    }
-                });
-                adapter.setOnDeleteClickListener(song -> {
-                    new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                            .setTitle("删除确认")
-                            .setMessage("确定要删除这首歌吗？")
-                            .setPositiveButton("删除", (dialog, which) -> {
-                                viewModel.deleteSong(song);
-                            })
-                            .setNegativeButton("取消", null)
-                            .show();
-                });
-                recyclerView.setAdapter(adapter);
+                adapter.updateData(songs);
             }
         });
 

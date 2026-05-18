@@ -101,11 +101,20 @@ public class LoginActivity extends AppCompatActivity {
                     btnLogin.setEnabled(true);
                     btnLogin.setText("登录");
                     ToastHelper.showShort(LoginActivity.this, "登录成功");
+                    
+                    android.util.Log.d("LoginActivity", "登录成功, 准备跳转到MainActivity, token长度=" + 
+                                       (user.getToken() != null ? user.getToken().length() : 0));
+                    
                     getSharedPreferences("avatar_prefs", MODE_PRIVATE)
                             .edit()
                             .putLong("avatar_update_time", System.currentTimeMillis())
-                            .apply();
-                    navigateToMain();
+                            .commit();
+                    
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                        android.util.Log.d("LoginActivity", "延迟后检查登录状态: " + 
+                                           UserManager.getInstance(LoginActivity.this).isLoggedIn());
+                        navigateToMain();
+                    }, 300);
                 });
             }
 

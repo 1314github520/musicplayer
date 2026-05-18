@@ -80,4 +80,24 @@ public class LyricUtils {
         }
         return entries;
     }
+
+    public static int findCurrentLyricIndex(List<LyricEntry> lyrics, long currentPosition) {
+        if (lyrics == null || lyrics.isEmpty()) {
+            return -1;
+        }
+
+        int low = 0;
+        int high = lyrics.size() - 1;
+        int index = -1;
+        while (low <= high) {
+            int mid = low + (high - low) / 2;
+            if (lyrics.get(mid).time <= currentPosition) {
+                index = mid;
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+        return index;
+    }
 }

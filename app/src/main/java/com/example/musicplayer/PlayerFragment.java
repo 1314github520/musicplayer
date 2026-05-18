@@ -422,14 +422,7 @@ public class PlayerFragment extends Fragment {
         Long currentPos = viewModel.getCurrentPosition().getValue();
         if (lyrics == null || currentPos == null || layoutManager == null) return;
 
-        int targetLine = 0;
-        for (int i = 0; i < lyrics.size(); i++) {
-            if (currentPos >= lyrics.get(i).time) {
-                targetLine = i;
-            } else {
-                break;
-            }
-        }
+        int targetLine = Math.max(0, LyricUtils.findCurrentLyricIndex(lyrics, currentPos));
 
         lyricAdapter.setCurrentLine(targetLine);
         

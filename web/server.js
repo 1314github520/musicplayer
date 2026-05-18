@@ -401,14 +401,14 @@ app.get('/api/song/search', async (req, res) => {
 app.get('/api/app/version', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT 
-        versionCode, 
-        versionName, 
-        downloadUrl, 
-        updateLog, 
-        publishTime 
-      FROM version 
-      ORDER BY versionCode DESC 
+      `SELECT
+        versionCode,
+        versionName,
+        downloadUrl,
+        updateLog,
+        publishTime
+      FROM version
+      ORDER BY versionCode DESC
       LIMIT 1`
     );
 
@@ -419,7 +419,7 @@ app.get('/api/app/version', async (req, res) => {
     }
 
     const version = rows[0];
-    
+
     // 修复下载地址路径
     let downloadUrl = version.downloadUrl;
     if (downloadUrl.startsWith('/musicplayer/')) {
@@ -430,13 +430,22 @@ app.get('/api/app/version', async (req, res) => {
       downloadUrl = '/resource/app/' + downloadUrl;
     }
 
-    res.json(ok({
+    // 防御性处理：如果 updateLog 为空，提供默认值
+    let updateLog = version.updateLog;
+    if (updateLog === null || updateLog === undefined || String(updateLog).trim() === '') {
+      updateLog = '## 🎉 更新内容\n\n### ✨ 新功能\n- 性能优化\n- Bug修复\n- 体验提升';
+      console.warn('[WARN] updateLog 为空，使用默认内容');
+    }
+
+    const responseData = {
       versionCode: version.versionCode,
       versionName: version.versionName,
       downloadUrl: downloadUrl,
-      updateLog: version.updateLog,
+      updateLog: updateLog,
       publishTime: version.publishTime
-    }));
+    };
+
+    res.json(ok(responseData));
 
   } catch (e) {
     console.error(e);

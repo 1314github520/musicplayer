@@ -319,7 +319,7 @@ public class SettingsFragment extends Fragment {
         if (updateDialog != null && updateDialog.isShowing()) {
             return;
         }
-        
+
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_update, null);
         TextView tvVersionName = dialogView.findViewById(R.id.tvVersionName);
         TextView tvUpdateLog = dialogView.findViewById(R.id.tvUpdateLog);
@@ -327,7 +327,17 @@ public class SettingsFragment extends Fragment {
         View btnUpdate = dialogView.findViewById(R.id.btnUpdate);
 
         tvVersionName.setText(versionInfo.versionName);
-        tvUpdateLog.setText(versionInfo.updateLog);
+
+        // 防御性处理：确保更新日志不为空
+        String updateLogText = versionInfo.updateLog;
+        if (updateLogText == null || updateLogText.trim().isEmpty()) {
+            updateLogText = "1. 性能优化\n2. Bug修复\n3. 体验提升";
+            android.util.Log.w("SettingsFragment", "updateLog为空,使用默认内容");
+        }
+        tvUpdateLog.setText(updateLogText);
+
+        android.util.Log.d("SettingsFragment", "显示更新对话框: " + versionInfo.versionName +
+                           ", 日志长度=" + updateLogText.length());
 
         updateDialog = new androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setView(dialogView)

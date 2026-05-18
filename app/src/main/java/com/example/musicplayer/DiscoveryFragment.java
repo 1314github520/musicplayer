@@ -29,12 +29,12 @@ import coil.request.ImageRequest;
 import coil.request.SuccessResult;
 
 public class DiscoveryFragment extends Fragment {
-
     private CardView heroCard;
     private View heroContainer;
     private ImageView heroImage;
     private TextView heroLyric;
     private TextView heroSubtitle;
+    private TextView tabCategory;
     private ImageView imgSong1, imgSong2, imgSong3;
     private ImageView btnHeroPlay;
     private View searchBar;
@@ -82,6 +82,8 @@ public class DiscoveryFragment extends Fragment {
         heroContainer = view.findViewById(R.id.heroContainer);
         heroImage = view.findViewById(R.id.heroImage);
         heroLyric = view.findViewById(R.id.heroLyric);
+        heroSubtitle = view.findViewById(R.id.heroSubtitle);
+        tabCategory = view.findViewById(R.id.tabCategory);
 
         imgSong1 = view.findViewById(R.id.imgSong1);
         imgSong2 = view.findViewById(R.id.imgSong2);
@@ -180,6 +182,10 @@ public class DiscoveryFragment extends Fragment {
             return;
         }
         android.util.Log.d("DiscoveryFragment", "开始刷新 UI，歌曲数量: " + songs.size());
+        if (!songs.isEmpty()) {
+            android.util.Log.d("DiscoveryFragment", "第一首: id=" + songs.get(0).id + " title=" + songs.get(0).title);
+            android.util.Log.d("DiscoveryFragment", "最后一首: id=" + songs.get(songs.size()-1).id + " title=" + songs.get(songs.size()-1).title);
+        }
         
         ImageLoader imageLoader = Coil.imageLoader(requireContext());
         if (recommendedAdapter != null) {
@@ -274,6 +280,13 @@ public class DiscoveryFragment extends Fragment {
     private void setupClickListeners() {
         View.OnClickListener playListener = v -> viewModel.requestTogglePlayback();
         if (btnHeroPlay != null) btnHeroPlay.setOnClickListener(playListener);
+        if (tabCategory != null) {
+            tabCategory.setOnClickListener(v -> {
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).showCategoryFragment();
+                }
+            });
+        }
         
         if (heroContainer != null) {
             heroContainer.setOnClickListener(v -> {

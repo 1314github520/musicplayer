@@ -128,9 +128,8 @@ public class MainActivity extends AppCompatActivity {
             viewModel.clearProfile();
         }
         
-        // 初始同步数据
+        // 初始同步数据（统一使用syncAllSongs，避免并发竞争）
         viewModel.syncAllSongs();
-        viewModel.fetchRemoteSongs();
 
         progressBar = findViewById(R.id.playbackProgress);
         importProgressBar = findViewById(R.id.importProgressBar);
@@ -364,11 +363,13 @@ public class MainActivity extends AppCompatActivity {
         TextView txtMine = (TextView) ((android.view.ViewGroup) navMine).getChildAt(1);
 
         navDiscover.setOnClickListener(v -> {
+            getSupportFragmentManager().popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
             switchFragment(new DiscoveryFragment(), "discover");
             updateNavUI(imgDiscover, txtDiscover, imgMine, txtMine, true);
         });
 
         navMine.setOnClickListener(v -> {
+            getSupportFragmentManager().popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
             switchFragment(new MineFragment(), "mine");
             updateNavUI(imgDiscover, txtDiscover, imgMine, txtMine, false);
         });
@@ -700,6 +701,13 @@ public class MainActivity extends AppCompatActivity {
     private void switchFragment(Fragment fragment, String tag) {
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragment_container, fragment, tag)
+                .commit();
+    }
+
+    public void showCategoryFragment() {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragment_container, new CategoryFragment(), "category")
+                .addToBackStack("category")
                 .commit();
     }
 
@@ -1046,20 +1054,7 @@ public class MainActivity extends AppCompatActivity {
     private void updateLyricSync(long currentPosition) {
         if (lyricList == null || lyricList.isEmpty()) return;
 
-        // 使用二分查找算法优化歌词匹配性能
-        int low = 0;
-        int high = lyricList.size() - 1;
-        int index = -1;
-
-        while (low <= high) {
-            int mid = (low + high) / 2;
-            if (lyricList.get(mid).time <= currentPosition) {
-                index = mid;
-                low = mid + 1;
-            } else {
-                high = mid - 1;
-            }
-        }
+        int index = LyricUtils.findCurrentLyricIndex(lyricList, currentPosition);
 
         String currentLine = "";
         if (index != -1) {

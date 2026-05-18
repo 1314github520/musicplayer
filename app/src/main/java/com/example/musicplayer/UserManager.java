@@ -53,14 +53,22 @@ public class UserManager {
 
     private void loadUserFromPrefs() {
         String userData = preferences.getString(KEY_USER_DATA, null);
-        if (userData != null) {
+        if (userData != null && !userData.isEmpty()) {
             try {
+                android.util.Log.d(TAG, "从SharedPreferences加载用户数据, 数据长度=" + userData.length());
                 JSONObject json = new JSONObject(userData);
                 currentUser = User.fromJson(json);
+                android.util.Log.d(TAG, "用户数据加载成功: username=" + currentUser.getUsername() + 
+                                   ", isLoggedIn=" + isLoggedIn() + 
+                                   ", token长度=" + (currentUser.getToken() != null ? 
+                                                       currentUser.getToken().length() : 0));
             } catch (JSONException e) {
                 Log.e(TAG, "Failed to parse user data", e);
+                Log.e(TAG, "原始数据: " + userData.substring(0, Math.min(userData.length(), 200)));
                 clearUserData();
             }
+        } else {
+            android.util.Log.d(TAG, "SharedPreferences中没有保存的用户数据");
         }
     }
 
@@ -75,14 +83,26 @@ public class UserManager {
             json.put("phone", user.getPhone() != null ? user.getPhone() : "");
             json.put("gender", user.getGender() != null ? user.getGender() : "");
             json.put("birthday", user.getBirthday() != null ? user.getBirthday() : "");
-            json.put("token", user.getToken() != null ? user.getToken() : "");
+            
+            String token = user.getToken();
+            if (token == null || token.isEmpty()) {
+                Log.w(TAG, "警告: 保存用户数据时token为空!");
+            }
+            json.put("token", token != null ? token : "");
             
             String jsonString = json.toString();
+            
+            android.util.Log.d(TAG, "保存用户数据: userId=" + user.getUserId() + 
+                               ", username=" + user.getUsername() + 
+                               ", token长度=" + (token != null ? token.length() : 0));
+            
             preferences.edit()
                     .putString(KEY_USER_DATA, jsonString)
-                    .putString(KEY_TOKEN, user.getToken())
-                    .apply();
+                    .putString(KEY_TOKEN, token != null ? token : "")
+                    .commit();
             currentUser = user;
+            
+            android.util.Log.d(TAG, "用户数据保存完成, isLoggedIn=" + isLoggedIn());
         } catch (JSONException e) {
             Log.e(TAG, "Failed to save user data", e);
         }

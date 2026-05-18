@@ -123,7 +123,11 @@ public class UpdateManager {
                         if (apiResponse != null && apiResponse.data != null) {
                             int currentVersionCode = getCurrentVersionCode();
                             VersionInfo info = apiResponse.data;
-                            
+
+                            Log.d("UpdateManager", "版本信息: " + info.versionName +
+                                  " (code=" + info.versionCode + ", current=" + currentVersionCode + ")" +
+                                  ", updateLog=" + (info.updateLog != null ? info.updateLog.length() + "字符" : "NULL"));
+
                             // 补全相对路径的下载链接
                             if (info.downloadUrl != null && !info.downloadUrl.startsWith("http")) {
                                 if (info.downloadUrl.startsWith("/")) {
@@ -131,6 +135,12 @@ public class UpdateManager {
                                 } else {
                                     info.downloadUrl = BASE_URL + "/" + info.downloadUrl;
                                 }
+                            }
+
+                            // 防御性处理：如果updateLog为空，提供默认值
+                            if (info.updateLog == null || info.updateLog.trim().isEmpty()) {
+                                info.updateLog = "1. 性能优化\n2. Bug修复\n3. 体验提升";
+                                Log.w("UpdateManager", "updateLog为空,使用默认内容");
                             }
 
                             if (info.versionCode > currentVersionCode) {

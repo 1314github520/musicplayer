@@ -49,41 +49,43 @@ public class LocalMusicFragment extends Fragment {
             }
         });
 
+        adapter = new SongAdapter(new ArrayList<>(), (song, position) -> {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).playSongList(adapter.getData(), position);
+            }
+        });
+        adapter.setOnDeleteClickListener(song -> {
+            new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle("删除确认")
+                    .setMessage("确定要删除这首歌吗？")
+                    .setPositiveButton("删除", (dialog, which) -> {
+                        // 如果是下载的文件，也删除物理文件
+                        if (song.path != null && song.path.startsWith("/")) {
+                            java.io.File file = new java.io.File(song.path);
+                            if (file.exists()) {
+                                boolean deleted = file.delete();
+                                if (!deleted) {
+                                    ToastHelper.showShort(getContext(),
+                                            "文件删除失败");
+                                    return;
+                                }
+                            }
+                        }
+                        viewModel.deleteSong(song);
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+        });
+        adapter.setOnDownloadClickListener(song -> {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).downloadSong(song);
+            }
+        });
+        recyclerView.setAdapter(adapter);
+
         viewModel.getDownloadedSongs().observe(getViewLifecycleOwner(), songs -> {
             if (songs != null) {
-                adapter = new SongAdapter(songs, (song, position) -> {
-                    if (getActivity() instanceof MainActivity) {
-                        ((MainActivity) getActivity()).playSongList(songs, position);
-                    }
-                });
-                adapter.setOnDeleteClickListener(song -> {
-                    new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                            .setTitle("删除确认")
-                            .setMessage("确定要删除这首歌吗？")
-                            .setPositiveButton("删除", (dialog, which) -> {
-                                // 如果是下载的文件，也删除物理文件
-                                if (song.path != null && song.path.startsWith("/")) {
-                                    java.io.File file = new java.io.File(song.path);
-                                    if (file.exists()) {
-                                        boolean deleted = file.delete();
-                                        if (!deleted) {
-                                            ToastHelper.showShort(getContext(), 
-                                                "文件删除失败");
-                                            return;
-                                        }
-                                    }
-                                }
-                                viewModel.deleteSong(song);
-                            })
-                            .setNegativeButton("取消", null)
-                            .show();
-                });
-                adapter.setOnDownloadClickListener(song -> {
-                    if (getActivity() instanceof MainActivity) {
-                        ((MainActivity) getActivity()).downloadSong(song);
-                    }
-                });
-                recyclerView.setAdapter(adapter);
+                adapter.updateData(songs);
             }
         });
 
