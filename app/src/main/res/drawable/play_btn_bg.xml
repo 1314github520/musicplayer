@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- 使用半透明白色背景，模拟磨砂质感 -->
-    <solid android:color="@color/accent_teal" />
-    <!-- 增大圆角，实现酷狗标志性的圆润方块感 -->
+    <solid android:color="?attr/colorPrimaryContainer" />
     <corners android:radius="32dp" />
 </shape>
 

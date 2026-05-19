@@ -2,7 +2,7 @@
 
 一个前后端分离的 Android 音乐播放器项目，包含 Android 客户端、Node.js 后端和 MySQL 数据存储。项目围绕在线听歌、本地管理、歌词同步、用户系统和版本更新实现了一套完整的音乐应用基础能力。
 
-![Version](https://img.shields.io/badge/version-v2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-v2.2-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Android%2012+-green.svg)
 ![Stack](https://img.shields.io/badge/stack-Android%20%2B%20Node.js-orange.svg)
 
@@ -32,7 +32,7 @@ MusicPlayer 的整体目标不是只做一个简单的播放器 Demo，而是做
 
 当前仓库中的主要版本信息如下：
 
-- Android 版本：`versionCode 20` / `versionName v2.0`
+- Android 版本：`versionCode 22` / `versionName v2.2`
 - Android SDK：`minSdk 31`、`targetSdk 35`、`compileSdk 35`
 - Android 语言级别：`Java 11`
 - 后端默认端口：`3000`
@@ -60,6 +60,7 @@ MusicPlayer 的整体目标不是只做一个简单的播放器 Demo，而是做
 - **实时同步** - 200ms 定时器 + 二分查找算法精确匹配当前歌词行
 - **智能缓存** - 本地数据库存储 + 内存缓存（500 条/30 天过期）
 - **LRCLIB 集成** - 支持按 ID 精确查找或按元数据模糊搜索网络歌词
+- **导入歌曲歌词搜索** - 本地导入歌曲播放时也会先显示“搜索歌词中...”，搜索成功后展示歌词，失败时回退为“暂无歌词”
 - **交互式歌词** - 播放器内可点击歌词跳转到对应时间点
 
 ### 🎨 视觉体验
@@ -80,8 +81,9 @@ MusicPlayer 的整体目标不是只做一个简单的播放器 Demo，而是做
 - **发现页** - Hero Card 动态背景 + 推荐歌单 + 新歌速递
 - **分类浏览** - 支持按歌手、专辑等维度查看歌曲分类
 - **本地搜索** - 支持歌曲名/歌手/专辑的不区分大小写模糊搜索
-- **收藏功能** - 收藏/取消收藏，独立页面展示收藏列表
-- **最近播放** - 7 天滑动窗口自动清理过期记录
+- **收藏功能** - 收藏/取消收藏，按账号同步到后端并在端侧缓存展示
+- **最近播放** - 7 天滑动窗口自动清理过期记录，并按账号同步到后端
+- **累计听歌数** - 基于账号的最近播放记录累计统计
 - **歌曲下载** - OkHttp 多线程下载到外部 Music 目录
 - **本地导入** - SAF FilePicker 选取音频文件，自动提取元数据入库
 
@@ -112,6 +114,7 @@ MusicPlayer 的整体目标不是只做一个简单的播放器 Demo，而是做
 ### 数据库
 - **远程数据库**: MySQL (`musicplayer` 数据库)
 - **本地数据库**: Room SQLite (`music_db`, 版本 10)
+- **账号音乐库表**: `user_favorites`、`user_recent_plays`
 
 > 注意：`web/server.js` 已实际使用 `bcryptjs` 和 `jsonwebtoken`，但这两个包当前尚未写入 `web/package.json`，首次启动前需要手动安装。
 
@@ -141,8 +144,7 @@ MusicPlayer/
 │  ├─ server.js
 │  ├─ package.json
 │  ├─ sql/
-│  │  ├─ users.sql
-│  │  └─ version.sql
+│  │  └─ users.sql
 │  ├─ index.html
 │  └─ 404.html
 ├─ PROJECT_INTRODUCTION.md
@@ -189,16 +191,16 @@ npm install
 CREATE DATABASE musicplayer CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-2. 导入表结构:
+2. 导入基础表结构:
 
 ```bash
 mysql -u your_username -p musicplayer < sql/users.sql
 ```
 
-3. 如需版本更新能力，可继续导入:
+3. 如需补充索引，可继续在仓库根目录执行：
 
 ```bash
-mysql -u your_username -p musicplayer < sql/version.sql
+mysql -u your_username -p musicplayer < ../database_indexes.sql
 ```
 
 4. 当前仓库中的后端配置不是 `.env` 驱动，而是直接写在 `web/server.js` 中，包括：
@@ -224,7 +226,7 @@ npm start
 
 #### 补充依赖
 
-根据当前仓库代码，首次启动前建议补装：
+根据当前仓库代码，首次启动前请补装：
 
 ```bash
 npm install bcryptjs jsonwebtoken
@@ -293,10 +295,16 @@ public static final class API {
 仓库中提供了：
 
 - `web/sql/users.sql`
-- `web/sql/version.sql`
 - `database_indexes.sql`
 
-但歌曲主表数据并未完整包含在上述 SQL 中。如果只导入现有 SQL，用户和版本相关接口可初始化，歌曲接口仍需要你自行准备 `songs` 表及数据。
+其中 `web/sql/users.sql` 已包含：
+
+- `users`
+- `user_preferences`
+- `user_favorites`
+- `user_recent_plays`
+
+但歌曲主表数据并未完整包含在上述 SQL 中。如果只导入现有 SQL，用户与账号音乐库接口可初始化，歌曲接口仍需要你自行准备 `songs` 表及数据。
 
 ## 📡 API 接口文档
 
@@ -311,6 +319,15 @@ public static final class API {
 | POST | `/api/user/change-password` | 是 | 修改密码 |
 | POST | `/api/user/delete` | 是 | 注销账号 |
 | POST | `/api/user/upload-avatar` | 是 | 上传头像 (base64) |
+
+### 用户音乐库
+
+| 方法 | 路径 | 认证 | 说明 |
+|------|------|------|------|
+| GET | `/api/user/library` | 是 | 获取当前账号的收藏、最近播放和累计听歌数 |
+| POST | `/api/user/favorites` | 是 | 设置收藏/取消收藏 |
+| POST | `/api/user/recent-play` | 是 | 上报最近播放记录并更新累计听歌数 |
+| DELETE | `/api/user/recent-play/:songId` | 是 | 删除某首歌的最近播放记录 |
 
 ### 音乐数据
 
@@ -406,14 +423,16 @@ public static final class API {
 ### 3. 歌词加载与同步
 1. 播放开始后，优先读取数据库或缓存中的歌词。
 2. 若本地没有歌词，则请求 LRCLIB。
-3. 获取到 LRC 后解析为时间轴结构并写回本地数据库。
-4. 播放过程中根据当前进度定位歌词行，实现实时高亮与滚动同步。
+3. 对导入歌曲，也会先显示“搜索歌词中...”，再按歌曲名/歌手/专辑/时长向 LRCLIB 搜索。
+4. 获取到 LRC 后解析为时间轴结构并写回本地数据库。
+5. 播放过程中根据当前进度定位歌词行，实现实时高亮与滚动同步。
 
 ### 4. 收藏、下载与本地管理
-1. 用户可在播放器或列表页直接收藏歌曲。
-2. 下载功能将歌曲保存到应用外部音乐目录，并通过通知栏展示进度。
-3. 下载完成后自动更新数据库，将该歌曲标记为本地文件。
-4. 用户也可手动导入本地音频，系统会和下载音乐分组展示。
+1. 用户可在播放器或列表页直接收藏歌曲，收藏状态会同步到当前账号。
+2. 最近播放与累计听歌数会随播放过程同步到当前账号。
+3. 下载功能将歌曲保存到应用外部音乐目录，并通过通知栏展示进度。
+4. 下载完成后自动更新数据库，将该歌曲标记为设备本地文件。
+5. 用户也可手动导入本地音频，系统会和下载音乐分组展示，导入歌曲支持播放时自动搜索歌词。
 
 ## 💡 核心技术亮点
 
@@ -447,7 +466,9 @@ private void updateLyricPosition() {
 ### 4. 数据同步策略
 - 远端 songs 表作为"权威数据源"
 - 本地 Room 作为离线缓存 + 本地状态扩展
-- `isLocal`、`isFavorite`、`lyrics` 等本地状态尽量保留，不被远程同步覆盖
+- `isLocal`、`lyrics` 等本地状态尽量保留，不被远程同步覆盖
+- 收藏与最近播放采用“服务端账号数据 + 端侧缓存覆盖”的同步方式
+- 本地下载与导入歌曲保持设备维度，不随账号切换被删除
 - 批量同步使用 IGNORE 策略保护本地修改
 
 ### 5. 性能优化
@@ -509,6 +530,7 @@ private void updateLyricPosition() {
 - 当前版本 10，已包含 `9 -> 10` 迁移
 - 最近播放 7 天滑动窗口自动清理
 - 支持本地模糊搜索 (title/singer/album)
+- 收藏与最近播放在本地作为当前登录账号的缓存，由服务端快照覆盖同步
 
 ## 🧪 测试
 
@@ -573,6 +595,7 @@ release/*     - 发布分支
 - ⚠️ 测试覆盖率极低 (< 5%)
 - ⚠️ `web/package.json` 未声明 `bcryptjs` 和 `jsonwebtoken`
 - ⚠️ 仓库中当前没有 `LICENSE` 文件
+- ⚠️ 账号隔离目前采用“服务端同步 + 本地缓存覆盖”，Room 本地表结构本身未直接按 `userId` 建模
 
 ### 建议优化项
 - 🔧 补齐后端依赖声明并增加锁文件
@@ -591,8 +614,7 @@ release/*     - 发布分支
 - [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) - 部署与上线说明
 - [CLAUDE.md](./CLAUDE.md) - 开发者视角的架构速览
 - [database_indexes.sql](./database_indexes.sql) - MySQL 查询优化索引脚本
-- [web/sql/users.sql](./web/sql/users.sql) - 用户表初始化脚本
-- [web/sql/version.sql](./web/sql/version.sql) - 版本更新表初始化脚本
+- [web/sql/users.sql](./web/sql/users.sql) - 用户、用户偏好、收藏和最近播放初始化脚本
 
 ## 👥 贡献者
 

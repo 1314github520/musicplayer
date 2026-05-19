@@ -47,8 +47,7 @@
             android:id="@+id/btnPlayAll"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
-            android:background="@drawable/play_btn_bg"
-            android:backgroundTint="#33A1FF"
+            android:background="@drawable/icon_button_md3_primary"
             android:gravity="center_vertical"
             android:paddingHorizontal="16dp">
 
@@ -56,7 +55,7 @@
                 android:layout_width="14dp"
                 android:layout_height="14dp"
                 android:src="@android:drawable/ic_media_play"
-                app:tint="#FFFFFF" />
+                app:tint="?attr/colorOnPrimary" />
 
             <TextView
                 android:id="@+id/tvSongCount"

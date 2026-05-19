@@ -579,22 +579,15 @@ public class UserManager {
         // 清理头像更新时间缓存
         context.getSharedPreferences("avatar_prefs", Context.MODE_PRIVATE).edit().clear().apply();
         
-        // 清理临时缓存（保留用户的个人数据：最近播放、收藏）
+        // 清理临时缓存：账号维度数据清空，本地下载/导入仍保留在设备上
         new Thread(() -> {
             AppDatabase db = AppDatabase.getInstance(context);
-            // ❌ 已移除：不再清空最近播放记录（db.recentPlayDao().deleteAll()）
-            // 原因：这是用户的个人数据，重新登录后应该保留
-            
-            // ✅ 保留：只删除远程歌曲（需要重新从服务器获取）
+            db.recentPlayDao().deleteAll();
+            db.songDao().clearFavorites();
             db.songDao().deleteRemoteSongs();
-            
-            // ❌ 已移除：不再清空收藏数据（db.songDao().clearFavorites()）
-            // 原因：收藏是用户的个人偏好，跨登录会话应保持一致
-            
-            // ✅ 保留：清理歌词缓存（可按需重新下载）
             LyricCacheManager.getInstance(context).clearCache();
             
-            Log.d(TAG, "Logout completed: cleared temporary cache, preserved user data");
+            Log.d(TAG, "Logout completed: cleared account scoped cache, preserved device songs");
         }).start();
     }
 

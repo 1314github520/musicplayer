@@ -474,8 +474,8 @@ public class MainActivity extends AppCompatActivity {
             
             if (isLocalImported) {
                 viewModel.setCoverUrl("android.resource://" + getPackageName() + "/" + R.drawable.music);
-                viewModel.setCurrentLyric("暂无歌词");
-                if (lyricSwitcher != null) lyricSwitcher.setText("暂无歌词");
+                viewModel.setCurrentLyric("搜索歌词中...");
+                if (lyricSwitcher != null) lyricSwitcher.setText("搜索歌词中...");
             } else {
                 if (song.coverUrl != null && !song.coverUrl.isEmpty()) {
                     viewModel.setCoverUrl(song.coverUrl);
@@ -486,12 +486,6 @@ public class MainActivity extends AppCompatActivity {
                 if (lyricSwitcher != null) lyricSwitcher.setText("加载中...");
             }
         });
-
-        // 如果是本地导入歌曲，不进行歌词搜索
-        if (isLocalImported) {
-            loadNoLyricsState();
-            return;
-        }
 
         // 2. 异步处理数据库检索和可能的网络请求
         viewModel.executorService.execute(() -> {
@@ -531,11 +525,6 @@ public class MainActivity extends AppCompatActivity {
      * 从网络获取歌词，并在成功后存入数据库
      */
     private void fetchLyricsFromNetwork(Song song) {
-        if (isLocalImportedSong(song)) {
-            runOnUiThread(() -> loadNoLyricsState());
-            return;
-        }
-
         viewModel.setCurrentLyric("搜索歌词中...");
         if (lyricSwitcher != null) lyricSwitcher.setText("搜索歌词中...");
 
@@ -1007,15 +996,23 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadNoLyricsState() {
-        lyricList = new java.util.ArrayList<>();
-        lyricList.add(new LyricEntry(0, "暂无歌词"));
-        viewModel.setLyrics(lyricList);
-        viewModel.setCurrentLyric("暂无歌词");
-        if (lyricSwitcher != null) {
-            lyricSwitcher.setText("暂无歌词");
+        Runnable updateTask = () -> {
+            lyricList = new java.util.ArrayList<>();
+            lyricList.add(new LyricEntry(0, "暂无歌词"));
+            viewModel.setLyrics(lyricList);
+            viewModel.setCurrentLyric("暂无歌词");
+            if (lyricSwitcher != null) {
+                lyricSwitcher.setText("暂无歌词");
+            }
+            // 重置播放位置相关的歌词更新标记
+            viewModel.setCurrentPosition(0);
+        };
+
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            updateTask.run();
+        } else {
+            runOnUiThread(updateTask);
         }
-        // 重置播放位置相关的歌词更新标记
-        viewModel.setCurrentPosition(0);
     }
 
     private void loadLyrics() {

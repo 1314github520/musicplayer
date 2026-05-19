@@ -10,6 +10,7 @@ const PORT = 3000;
 
 const JWT_SECRET = '123456';
 const JWT_EXPIRES_IN = '7d';
+const RECENT_PLAY_WINDOW_DAYS = 7;
 
 app.use(express.json({
   strict: false,
@@ -625,6 +626,69 @@ async function authenticateToken(req, res, next) {
   next();
 }
 
+async function ensureSongExists(songId) {
+  const [rows] = await pool.query('SELECT id FROM songs WHERE id = ? LIMIT 1', [songId]);
+  return rows.length > 0;
+}
+
+async function getUserLibrarySnapshot(userId) {
+  const [favoriteRows] = await pool.query(
+    `
+    SELECT song_id
+    FROM user_favorites
+    WHERE user_id = ?
+    ORDER BY created_at DESC, song_id DESC
+    `,
+    [userId]
+  );
+
+  const [recentRows] = await pool.query(
+    `
+    SELECT
+      song_id AS songId,
+      UNIX_TIMESTAMP(MAX(played_at)) * 1000 AS timestamp
+    FROM user_recent_plays
+    WHERE user_id = ?
+      AND played_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    GROUP BY song_id
+    ORDER BY MAX(played_at) DESC
+    `,
+    [userId, RECENT_PLAY_WINDOW_DAYS]
+  );
+
+  const [countRows] = await pool.query(
+    `
+    SELECT
+      (SELECT COUNT(*) FROM user_favorites WHERE user_id = ?) AS favoriteCount,
+      (
+        SELECT COUNT(DISTINCT song_id)
+        FROM user_recent_plays
+        WHERE user_id = ?
+          AND played_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+      ) AS recentCount,
+      (
+        SELECT COUNT(*)
+        FROM user_recent_plays
+        WHERE user_id = ?
+      ) AS totalPlayCount
+    `,
+    [userId, userId, RECENT_PLAY_WINDOW_DAYS, userId]
+  );
+
+  const counts = countRows[0] || {};
+
+  return {
+    favoriteSongIds: favoriteRows.map(row => row.song_id),
+    recentPlays: recentRows.map(row => ({
+      songId: row.songId,
+      timestamp: Number(row.timestamp) || 0
+    })),
+    favoriteCount: Number(counts.favoriteCount) || 0,
+    recentCount: Number(counts.recentCount) || 0,
+    totalPlayCount: Number(counts.totalPlayCount) || 0
+  };
+}
+
 app.post('/api/user/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -763,6 +827,122 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
   } catch (e) {
     console.error('Get profile error:', e);
     res.status(500).json(err('Failed to get profile: ' + e.message, 500));
+  }
+});
+
+app.get('/api/user/library', authenticateToken, async (req, res) => {
+  try {
+    const snapshot = await getUserLibrarySnapshot(req.userId);
+    res.json(ok(snapshot));
+  } catch (e) {
+    console.error('Get user library error:', e);
+    res.status(500).json(err('Failed to get user library: ' + e.message, 500));
+  }
+});
+
+app.post('/api/user/favorites', authenticateToken, async (req, res) => {
+  try {
+    const { songId, isFavorite } = req.body;
+    const validation = validateId(songId);
+
+    if (!validation.valid) {
+      return res.status(400).json(err(validation.error));
+    }
+
+    if (typeof isFavorite !== 'boolean') {
+      return res.status(400).json(err('isFavorite must be a boolean'));
+    }
+
+    const exists = await ensureSongExists(validation.value);
+    if (!exists) {
+      return res.status(404).json(err('Song not found', 404));
+    }
+
+    if (isFavorite) {
+      await pool.query(
+        `
+        INSERT INTO user_favorites (user_id, song_id)
+        VALUES (?, ?)
+        ON DUPLICATE KEY UPDATE created_at = CURRENT_TIMESTAMP
+        `,
+        [req.userId, validation.value]
+      );
+    } else {
+      await pool.query(
+        'DELETE FROM user_favorites WHERE user_id = ? AND song_id = ?',
+        [req.userId, validation.value]
+      );
+    }
+
+    const snapshot = await getUserLibrarySnapshot(req.userId);
+    res.json(ok({
+      songId: validation.value,
+      isFavorite,
+      favoriteCount: snapshot.favoriteCount
+    }));
+  } catch (e) {
+    console.error('Update favorites error:', e);
+    res.status(500).json(err('Failed to update favorites: ' + e.message, 500));
+  }
+});
+
+app.post('/api/user/recent-play', authenticateToken, async (req, res) => {
+  try {
+    const { songId, playedAt } = req.body;
+    const validation = validateId(songId);
+
+    if (!validation.valid) {
+      return res.status(400).json(err(validation.error));
+    }
+
+    const exists = await ensureSongExists(validation.value);
+    if (!exists) {
+      return res.status(404).json(err('Song not found', 404));
+    }
+
+    const playDate = new Date(
+      typeof playedAt === 'number' && playedAt > 0 ? playedAt : Date.now()
+    );
+
+    await pool.query(
+      'INSERT INTO user_recent_plays (user_id, song_id, played_at) VALUES (?, ?, ?)',
+      [req.userId, validation.value, playDate]
+    );
+
+    const snapshot = await getUserLibrarySnapshot(req.userId);
+    res.json(ok({
+      songId: validation.value,
+      recentCount: snapshot.recentCount,
+      totalPlayCount: snapshot.totalPlayCount
+    }));
+  } catch (e) {
+    console.error('Add recent play error:', e);
+    res.status(500).json(err('Failed to add recent play: ' + e.message, 500));
+  }
+});
+
+app.delete('/api/user/recent-play/:songId', authenticateToken, async (req, res) => {
+  try {
+    const validation = validateId(req.params.songId);
+
+    if (!validation.valid) {
+      return res.status(400).json(err(validation.error));
+    }
+
+    await pool.query(
+      'DELETE FROM user_recent_plays WHERE user_id = ? AND song_id = ?',
+      [req.userId, validation.value]
+    );
+
+    const snapshot = await getUserLibrarySnapshot(req.userId);
+    res.json(ok({
+      songId: validation.value,
+      recentCount: snapshot.recentCount,
+      totalPlayCount: snapshot.totalPlayCount
+    }));
+  } catch (e) {
+    console.error('Delete recent play error:', e);
+    res.status(500).json(err('Failed to delete recent play: ' + e.message, 500));
   }
 });
 

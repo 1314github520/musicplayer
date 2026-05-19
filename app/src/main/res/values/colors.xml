@@ -3,6 +3,42 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
+    <!-- Material Design 3 颜色角色 - 浅色模式 -->
+    <color name="md_theme_primary">#006060</color>
+    <color name="md_theme_onPrimary">#FFFFFF</color>
+    <color name="md_theme_primaryContainer">#A4F6A8</color>
+    <color name="md_theme_onPrimaryContainer">#002107</color>
+    
+    <color name="md_theme_secondary">#4D6357</color>
+    <color name="md_theme_onSecondary">#FFFFFF</color>
+    <color name="md_theme_secondaryContainer">#CFE9D9</color>
+    <color name="md_theme_onSecondaryContainer">#092016</color>
+    
+    <color name="md_theme_tertiary">#3D6373</color>
+    <color name="md_theme_onTertiary">#FFFFFF</color>
+    <color name="md_theme_tertiaryContainer">#C1E8FB</color>
+    <color name="md_theme_onTertiaryContainer">#001F29</color>
+    
+    <color name="md_theme_error">#BA1A1A</color>
+    <color name="md_theme_onError">#FFFFFF</color>
+    <color name="md_theme_errorContainer">#FFDAD6</color>
+    <color name="md_theme_onErrorContainer">#410002</color>
+    
+    <color name="md_theme_background">#FBFDF9</color>
+    <color name="md_theme_onBackground">#191C1A</color>
+    <color name="md_theme_surface">#FBFDF9</color>
+    <color name="md_theme_onSurface">#191C1A</color>
+    <color name="md_theme_surfaceVariant">#DBE5DE</color>
+    <color name="md_theme_onSurfaceVariant">#404943</color>
+    <color name="md_theme_outline">#707973</color>
+    <color name="md_theme_outlineVariant">#C0C9C2</color>
+    <color name="md_theme_inverseSurface">#2E312E</color>
+    <color name="md_theme_inverseOnSurface">#F0F1EE</color>
+    <color name="md_theme_inversePrimary">#88D98D</color>
+    <color name="md_theme_shadow">#000000</color>
+    <color name="md_theme_scrim">#000000</color>
+    <color name="md_theme_surfaceTint">#006060</color>
+
     <!-- 基础背景和文本色 - 浅色模式优化 -->
     <color name="bg_dark">#FFFFFF</color>
     <color name="card_bg">#F5F7F9</color>
@@ -27,6 +63,7 @@
     <color name="player_btn_favorite_inactive">#88FFFFFF</color>
     <color name="player_btn_download_active">#4CAF50</color>
     <color name="player_btn_download_inactive">#88FFFFFF</color>
+    <color name="player_btn_pause_blue">#2196F3</color>
     
     <!-- 歌词颜色（浅色模式 - 统一为深色背景亮色调） -->
     <color name="lyric_current">#00E5FF</color>

@@ -25,13 +25,11 @@
 
             <Button
                 android:id="@+id/btnLogin"
+                style="@style/Widget.MusicPlayer.Button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="登录/注册"
-                android:textColor="#FFFFFF"
                 android:textSize="16sp"
-                android:textStyle="bold"
-                android:background="@drawable/button_bg"
                 android:paddingHorizontal="24dp"
                 android:paddingVertical="8dp"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -104,16 +102,18 @@
                         </LinearLayout>
                     </LinearLayout>
 
-                    <TextView
+                    <Button
                         android:id="@+id/btnEdit"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/play_btn_bg"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="4dp"
+                        android:background="@drawable/btn_md3_filled"
+                        android:minWidth="80dp"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="8dp"
                         android:text="@string/edit_profile"
-                        android:textColor="#FFFFFF"
-                        android:textSize="12sp" />
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
 
                 <TextView

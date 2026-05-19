@@ -72,6 +72,9 @@ public interface SongDao {
     @Query("SELECT COUNT(*) FROM songs WHERE isFavorite = 1")
     LiveData<Integer> getFavoriteSongsCount();
 
+    @Query("UPDATE songs SET isFavorite = :isFavorite WHERE id = :songId")
+    void setFavoriteStatus(int songId, boolean isFavorite);
+
     /**
      * 本地搜索歌曲（支持歌曲名、歌手、专辑）
      * 使用LOWER进行不区分大小写的搜索

@@ -181,14 +181,14 @@
                             android:id="@+id/btnHeroPlay"
                             android:layout_width="40dp"
                             android:layout_height="40dp"
-                            android:background="@drawable/play_btn_bg"
+                            android:background="@drawable/icon_button_md3_primary"
                             android:contentDescription="@null"
                             android:padding="10dp"
                             android:src="@android:drawable/ic_media_play"
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintTop_toTopOf="parent"
-                            app:tint="@color/white" />
+                            app:tint="@color/player_btn_pause_blue" />
 
                     </androidx.constraintlayout.widget.ConstraintLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -245,7 +245,7 @@
                     android:textSize="13sp" />
             </RelativeLayout>
 
-            <!-- New Songs Card -->
+            <!-- New Songs Carousel -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/layoutNewSongs"
                 android:layout_width="match_parent"
@@ -272,138 +272,41 @@
                         app:layout_constraintTop_toTopOf="parent" />
 
                     <LinearLayout
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        android:orientation="horizontal"
-                        app:layout_constraintBottom_toBottomOf="parent"
+                        android:layout_marginTop="8dp"
+                        app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/songTitle">
 
-                        <!-- Song 1 -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-                            <com.google.android.material.card.MaterialCardView
-                                android:layout_width="match_parent"
-                                android:layout_height="100dp"
-                                app:cardCornerRadius="12dp"
-                                app:cardElevation="0dp"
-                                app:strokeWidth="0dp">
-                                <ImageView
-                                    android:id="@+id/imgSong1"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:scaleType="centerCrop"
-                                    android:src="@drawable/music"
-                                    android:contentDescription="@null" />
-                            </com.google.android.material.card.MaterialCardView>
-                            <TextView
-                                android:id="@+id/tvSongName1"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:ellipsize="end"
-                                android:maxLines="1"
-                                android:text="@string/song_1"
-                                android:textColor="@color/text_primary"
-                                android:textSize="13sp"
-                                android:textStyle="bold" />
-                            <TextView
-                                android:id="@+id/tvArtistName1"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/artist_1"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
-                        </LinearLayout>
+                        <View
+                            android:id="@+id/indicator1"
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
+                            android:background="@drawable/carousel_indicator_active" />
 
-                        <View android:layout_width="12dp" android:layout_height="1dp" />
+                        <View
+                            android:id="@+id/indicator2"
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
+                            android:layout_marginStart="6dp"
+                            android:background="@drawable/carousel_indicator_inactive" />
 
-                        <!-- Song 2 -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-                            <com.google.android.material.card.MaterialCardView
-                                android:layout_width="match_parent"
-                                android:layout_height="100dp"
-                                app:cardCornerRadius="12dp"
-                                app:cardElevation="0dp"
-                                app:strokeWidth="0dp">
-                                <ImageView
-                                    android:id="@+id/imgSong2"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:scaleType="centerCrop"
-                                    android:src="@drawable/music"
-                                    android:contentDescription="@null" />
-                            </com.google.android.material.card.MaterialCardView>
-                            <TextView
-                                android:id="@+id/tvSongName2"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:ellipsize="end"
-                                android:maxLines="1"
-                                android:text="@string/song_2"
-                                android:textColor="@color/text_primary"
-                                android:textSize="13sp"
-                                android:textStyle="bold" />
-                            <TextView
-                                android:id="@+id/tvArtistName2"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/artist_2"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
-                        </LinearLayout>
-
-                        <View android:layout_width="12dp" android:layout_height="1dp" />
-
-                        <!-- Song 3 -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-                            <com.google.android.material.card.MaterialCardView
-                                android:layout_width="match_parent"
-                                android:layout_height="100dp"
-                                app:cardCornerRadius="12dp"
-                                app:cardElevation="0dp"
-                                app:strokeWidth="0dp">
-                                <ImageView
-                                    android:id="@+id/imgSong3"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:scaleType="centerCrop"
-                                    android:src="@drawable/music"
-                                    android:contentDescription="@null" />
-                            </com.google.android.material.card.MaterialCardView>
-
-                            <TextView
-                                android:id="@+id/tvSongName3"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:ellipsize="end"
-                                android:maxLines="1"
-                                android:text="@string/song_3"
-                                android:textColor="@color/text_primary"
-                                android:textSize="13sp"
-                                android:textStyle="bold" />
-                            <TextView
-                                android:id="@+id/tvArtistName3"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/artist_3"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
-                        </LinearLayout>
+                        <View
+                            android:id="@+id/indicator3"
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
+                            android:layout_marginStart="6dp"
+                            android:background="@drawable/carousel_indicator_inactive" />
                     </LinearLayout>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/carouselRecyclerView"
+                        android:layout_width="match_parent"
+                        android:layout_height="180dp"
+                        android:layout_marginTop="16dp"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/songTitle" />
+
                 </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
 

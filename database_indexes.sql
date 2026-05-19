@@ -14,5 +14,12 @@ CREATE INDEX IF NOT EXISTS idx_songs_created_at ON songs(created_at);
 CREATE INDEX IF NOT EXISTS idx_recentplay_songid ON recent_play(songId);
 CREATE INDEX IF NOT EXISTS idx_recentplay_playtime ON recent_play(playTime);
 
+-- 用户收藏与最近播放账号维度索引
+CREATE INDEX IF NOT EXISTS idx_user_favorites_song_id ON user_favorites(song_id);
+CREATE INDEX IF NOT EXISTS idx_user_favorites_created_at ON user_favorites(created_at);
+CREATE INDEX IF NOT EXISTS idx_user_recent_plays_user_played ON user_recent_plays(user_id, played_at);
+CREATE INDEX IF NOT EXISTS idx_user_recent_plays_user_song ON user_recent_plays(user_id, song_id);
+CREATE INDEX IF NOT EXISTS idx_user_recent_plays_song_id ON user_recent_plays(song_id);
+
 -- 组合索引（用于搜索）
 CREATE INDEX IF NOT EXISTS idx_songs_search ON songs(LOWER(title), LOWER(singer), LOWER(album));

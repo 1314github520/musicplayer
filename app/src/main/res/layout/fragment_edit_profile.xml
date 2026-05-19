@@ -33,7 +33,7 @@
 
         <Button
             android:id="@+id/btnSave"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
+            style="@style/Widget.MusicPlayer.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
@@ -41,9 +41,7 @@
             android:minWidth="0dp"
             android:paddingHorizontal="12dp"
             android:text="保存"
-            android:textColor="@color/accent_teal"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:textSize="16sp" />
     </RelativeLayout>
 
     <ScrollView

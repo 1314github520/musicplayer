@@ -154,40 +154,40 @@
             android:layout_width="56dp"
             android:layout_height="56dp"
             android:layout_marginTop="30dp"
-            android:background="@drawable/btn_interactive_bg"
+            android:background="@drawable/icon_button_md3_surface"
             android:padding="18dp"
             android:src="@android:drawable/ic_media_previous"
             app:layout_constraintEnd_toStartOf="@+id/btnPlayPause"
             app:layout_constraintHorizontal_chainStyle="spread_inside"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvCurrentTime"
-            app:tint="@color/player_icon_tint" />
+            app:tint="?attr/colorOnSurfaceVariant" />
 
         <ImageView
             android:id="@+id/btnPlayPause"
             android:layout_width="76dp"
             android:layout_height="76dp"
             android:layout_marginTop="20dp"
-            android:background="@drawable/btn_interactive_bg"
+            android:background="@drawable/icon_button_md3_primary"
             android:padding="22dp"
             android:src="@android:drawable/ic_media_pause"
             app:layout_constraintEnd_toStartOf="@+id/btnNext"
             app:layout_constraintStart_toEndOf="@+id/btnPrev"
             app:layout_constraintTop_toBottomOf="@id/tvCurrentTime"
-            app:tint="@color/player_icon_tint" />
+            app:tint="@color/player_btn_pause_blue" />
 
         <ImageView
             android:id="@+id/btnNext"
             android:layout_width="56dp"
             android:layout_height="56dp"
             android:layout_marginTop="30dp"
-            android:background="@drawable/btn_interactive_bg"
+            android:background="@drawable/icon_button_md3_surface"
             android:padding="18dp"
             android:src="@android:drawable/ic_media_next"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/btnPlayPause"
             app:layout_constraintTop_toBottomOf="@id/tvCurrentTime"
-            app:tint="@color/player_icon_tint" />
+            app:tint="?attr/colorOnSurfaceVariant" />
 
         <!-- 3. Bottom Utility Row -->
         <ImageView

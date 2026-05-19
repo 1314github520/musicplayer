@@ -217,6 +217,7 @@ public class PlayerFragment extends Fragment {
                 if (song != null) {
                     song.isFavorite = !song.isFavorite;
                     AppDatabase.getInstance(requireContext()).songDao().updateSong(song);
+                    viewModel.syncFavoriteToServer(song.id, song.isFavorite);
                     if (getActivity() != null && !getActivity().isFinishing()) {
                         getActivity().runOnUiThread(() -> {
                             updateFavoriteIcon(song.isFavorite);

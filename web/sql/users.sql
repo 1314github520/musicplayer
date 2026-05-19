@@ -15,13 +15,39 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
-CREATE TABLE IF NOT EXISTS user_preferences (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+
+CREATE TABLE IF NOT EXISTS user_favorites (
     user_id INT NOT NULL COMMENT '用户ID',
-    key_name VARCHAR(50) NOT NULL COMMENT '配置键名',
-    key_value TEXT COMMENT '配置值',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    song_id INT NOT NULL COMMENT '歌曲ID',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '收藏时间',
+    PRIMARY KEY (user_id, song_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE KEY uk_user_key (user_id, key_name)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户偏好设置表';
+    INDEX idx_user_favorites_song_id (song_id),
+    INDEX idx_user_favorites_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户收藏表';
+
+CREATE TABLE IF NOT EXISTS user_recent_plays (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL COMMENT '用户ID',
+    song_id INT NOT NULL COMMENT '歌曲ID',
+    played_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '播放时间',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_recent_plays_user_played (user_id, played_at),
+    INDEX idx_user_recent_plays_user_song (user_id, song_id),
+    INDEX idx_user_recent_plays_song_id (song_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户最近播放记录表';
+
+-- =====================================================
+-- MusicPlayer 版本管理表
+-- 用于存储应用版本信息和更新日志
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS version (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    versionCode INT NOT NULL COMMENT '版本号(整数，用于比较)',
+    versionName VARCHAR(50) NOT NULL COMMENT '版本名称(如 v2.0)',
+    downloadUrl VARCHAR(500) NOT NULL COMMENT 'APK下载地址',
+    updateLog TEXT COMMENT '更新日志内容(Markdown或纯文本)',
+    publishTime DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '发布时间',
+    INDEX idx_version_code (versionCode)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='应用版本表';

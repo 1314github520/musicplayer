@@ -84,6 +84,7 @@ public class FavoriteMusicFragment extends Fragment {
                     .setPositiveButton("确定", (dialog, which) -> {
                         song.isFavorite = false;
                         viewModel.updateSong(song);
+                        viewModel.syncFavoriteToServer(song.id, false);
                         ToastHelper.showShort(getContext(), "已取消收藏");
                     })
                     .setNegativeButton("取消", null)

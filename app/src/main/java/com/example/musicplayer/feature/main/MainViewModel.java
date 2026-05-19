@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import com.example.musicplayer.core.Constants;
 import com.example.musicplayer.core.network.HttpClient;
 import com.example.musicplayer.data.local.AppDatabase;
 import com.example.musicplayer.data.local.RecentPlayDao;
@@ -20,6 +21,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import okhttp3.MediaType;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class MainViewModel extends AndroidViewModel {
     public static final String BASE_URL = "http://8.162.14.195:3000";
@@ -59,6 +66,7 @@ public class MainViewModel extends AndroidViewModel {
     private final MutableLiveData<String> userGender = new MutableLiveData<>();
     private final MutableLiveData<String> userBirthday = new MutableLiveData<>();
     private final MutableLiveData<String> userAvatarUri = new MutableLiveData<>();
+    private final MutableLiveData<Integer> totalPlayCount = new MutableLiveData<>(0);
 
     // 数据同步状态（用于解决重新登录后收藏数据不显示的问题）
     private final MutableLiveData<Boolean> isDataSynced = new MutableLiveData<>(false);
@@ -108,7 +116,7 @@ public class MainViewModel extends AndroidViewModel {
     public LiveData<Integer> getRecentCount() { 
         return recentPlayDao.getRecentCount(System.currentTimeMillis() - 604800000L); 
     }
-    public LiveData<Integer> getTotalPlayCount() { return recentPlayDao.getTotalPlayCount(); }
+    public LiveData<Integer> getTotalPlayCount() { return totalPlayCount; }
     
     // --- 数据同步状态 ---
     public LiveData<Boolean> isDataSynced() { return isDataSynced; }
@@ -184,6 +192,8 @@ public class MainViewModel extends AndroidViewModel {
                 long currentTime = System.currentTimeMillis();
                 recentPlayDao.insert(new RecentPlay(songId, currentTime));
                 recentPlayDao.deleteOldRecords(currentTime - 604800000L);
+                incrementTotalPlayCount();
+                syncRecentPlayToServer(songId, currentTime);
             } catch (Exception e) { android.util.Log.e("MainViewModel", "Add recent failed", e); }
         });
     }
@@ -192,7 +202,41 @@ public class MainViewModel extends AndroidViewModel {
         executorService.execute(() -> {
             try {
                 recentPlayDao.deleteBySongId(songId);
+                deleteRecentPlayFromServer(songId);
             } catch (Exception e) { android.util.Log.e("MainViewModel", "Delete recent play failed", e); }
+        });
+    }
+
+    public void syncFavoriteToServer(int songId, boolean isFavorite) {
+        UserManager userManager = UserManager.getInstance(getApplication());
+        String token = userManager.getToken();
+        if (token == null || token.isEmpty()) {
+            return;
+        }
+
+        executorService.execute(() -> {
+            try {
+                JSONObject body = new JSONObject();
+                body.put("songId", songId);
+                body.put("isFavorite", isFavorite);
+
+                Request request = new Request.Builder()
+                        .url(Constants.API.BASE_URL + "/api/user/favorites")
+                        .header("Authorization", "Bearer " + token)
+                        .post(RequestBody.create(
+                                body.toString(),
+                                MediaType.parse("application/json")
+                        ))
+                        .build();
+
+                try (Response response = HttpClient.getInstance().newCall(request).execute()) {
+                    if (!response.isSuccessful()) {
+                        android.util.Log.w("MainViewModel", "收藏同步失败: HTTP " + response.code());
+                    }
+                }
+            } catch (Exception e) {
+                android.util.Log.e("MainViewModel", "Sync favorite failed", e);
+            }
         });
     }
 
@@ -213,7 +257,8 @@ public class MainViewModel extends AndroidViewModel {
                         if (apiResponse != null && apiResponse.data != null) {
                             List<Song> songs = convertToSongs(apiResponse.data);
                             songDao.mergeRemoteSongs(songs);
-                            remoteSongs.postValue(songs);
+                            syncUserLibraryCache();
+                            remoteSongs.postValue(songDao.getAllSongsSync());
                         }
                     }
                 }
@@ -269,11 +314,12 @@ public class MainViewModel extends AndroidViewModel {
                             List<Song> songs = convertToSongs(apiResponse.data);
                             android.util.Log.d("MainViewModel", "syncAllSongs - 转换后歌曲数: " + songs.size() + " 首");
                             songDao.mergeRemoteSongs(songs);
+                            syncUserLibraryCache();
                             // 标记网络同步完成
                             networkSyncCompleted = true;
                             android.util.Log.d("MainViewModel", "网络数据同步完成，更新UI");
                             android.util.Log.d("MainViewModel", "syncAllSongs - 发送到UI的歌曲数: " + songs.size() + " 首");
-                            remoteSongs.postValue(songs); // 更新UI显示最新数据
+                            remoteSongs.postValue(songDao.getAllSongsSync()); // 更新UI显示最新数据
                         }
                     }
                 }
@@ -345,6 +391,7 @@ public class MainViewModel extends AndroidViewModel {
             userGender.setValue("");
             userBirthday.setValue("");
             userId.setValue("");
+            totalPlayCount.setValue(0);
         }
     }
 
@@ -383,6 +430,7 @@ public class MainViewModel extends AndroidViewModel {
         userGender.setValue("");
         userBirthday.setValue("");
         userId.setValue("");
+        totalPlayCount.setValue(0);
     }
 
     public void cancelAllTasks() {
@@ -395,6 +443,134 @@ public class MainViewModel extends AndroidViewModel {
         if (executorService == null || executorService.isShutdown()) {
             executorService = Executors.newFixedThreadPool(4);
         }
+    }
+
+    private void syncUserLibraryCache() {
+        UserManager userManager = UserManager.getInstance(getApplication());
+        String token = userManager.getToken();
+        if (token == null || token.isEmpty()) {
+            totalPlayCount.postValue(0);
+            return;
+        }
+
+        try {
+            Request request = new Request.Builder()
+                    .url(Constants.API.BASE_URL + "/api/user/library")
+                    .header("Authorization", "Bearer " + token)
+                    .build();
+
+            try (Response response = HttpClient.getInstance().newCall(request).execute()) {
+                if (!response.isSuccessful() || response.body() == null) {
+                    android.util.Log.w("MainViewModel", "用户音乐数据同步失败: HTTP " + response.code());
+                    return;
+                }
+
+                JSONObject json = new JSONObject(response.body().string());
+                if (json.optInt("code", -1) != 0) {
+                    android.util.Log.w("MainViewModel", "用户音乐数据同步失败: " + json.optString("message"));
+                    return;
+                }
+
+                JSONObject data = json.optJSONObject("data");
+                if (data == null) {
+                    return;
+                }
+
+                JSONArray favoriteSongIds = data.optJSONArray("favoriteSongIds");
+                JSONArray recentPlays = data.optJSONArray("recentPlays");
+
+                songDao.clearFavorites();
+                if (favoriteSongIds != null) {
+                    for (int i = 0; i < favoriteSongIds.length(); i++) {
+                        songDao.setFavoriteStatus(favoriteSongIds.optInt(i, -1), true);
+                    }
+                }
+
+                recentPlayDao.deleteAll();
+                if (recentPlays != null) {
+                    for (int i = 0; i < recentPlays.length(); i++) {
+                        JSONObject item = recentPlays.optJSONObject(i);
+                        if (item == null) continue;
+                        int songId = item.optInt("songId", -1);
+                        long timestamp = item.optLong("timestamp", 0L);
+                        if (songId > 0 && timestamp > 0L) {
+                            recentPlayDao.insert(new RecentPlay(songId, timestamp));
+                        }
+                    }
+                }
+
+                totalPlayCount.postValue(data.optInt("totalPlayCount", 0));
+            }
+        } catch (Exception e) {
+            android.util.Log.e("MainViewModel", "Sync user library failed", e);
+        }
+    }
+
+    private void syncRecentPlayToServer(int songId, long playedAt) {
+        UserManager userManager = UserManager.getInstance(getApplication());
+        String token = userManager.getToken();
+        if (token == null || token.isEmpty()) {
+            return;
+        }
+
+        try {
+            JSONObject body = new JSONObject();
+            body.put("songId", songId);
+            body.put("playedAt", playedAt);
+
+            Request request = new Request.Builder()
+                    .url(Constants.API.BASE_URL + "/api/user/recent-play")
+                    .header("Authorization", "Bearer " + token)
+                    .post(RequestBody.create(
+                            body.toString(),
+                            MediaType.parse("application/json")
+                    ))
+                    .build();
+
+            try (Response response = HttpClient.getInstance().newCall(request).execute()) {
+                if (!response.isSuccessful() || response.body() == null) {
+                    android.util.Log.w("MainViewModel", "最近播放同步失败: HTTP " + response.code());
+                    return;
+                }
+
+                JSONObject json = new JSONObject(response.body().string());
+                JSONObject data = json.optJSONObject("data");
+                if (data != null) {
+                    totalPlayCount.postValue(data.optInt("totalPlayCount", totalPlayCount.getValue() != null ? totalPlayCount.getValue() : 0));
+                }
+            }
+        } catch (Exception e) {
+            android.util.Log.e("MainViewModel", "Sync recent play failed", e);
+        }
+    }
+
+    private void deleteRecentPlayFromServer(int songId) {
+        UserManager userManager = UserManager.getInstance(getApplication());
+        String token = userManager.getToken();
+        if (token == null || token.isEmpty()) {
+            return;
+        }
+
+        try {
+            Request request = new Request.Builder()
+                    .url(Constants.API.BASE_URL + "/api/user/recent-play/" + songId)
+                    .header("Authorization", "Bearer " + token)
+                    .delete()
+                    .build();
+
+            try (Response response = HttpClient.getInstance().newCall(request).execute()) {
+                if (!response.isSuccessful()) {
+                    android.util.Log.w("MainViewModel", "删除最近播放同步失败: HTTP " + response.code());
+                }
+            }
+        } catch (Exception e) {
+            android.util.Log.e("MainViewModel", "Delete recent play from server failed", e);
+        }
+    }
+
+    private void incrementTotalPlayCount() {
+        Integer current = totalPlayCount.getValue();
+        totalPlayCount.postValue((current != null ? current : 0) + 1);
     }
 
     @Override

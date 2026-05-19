@@ -35,27 +35,23 @@
 
         <Button
             android:id="@+id/btnCancel"
+            style="@style/Widget.MusicPlayer.Button.Outlined"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
             android:text="取消"
-            android:textColor="@color/text_primary"
-            android:background="@drawable/button_secondary_bg"
             android:textSize="15sp"
-            android:layout_marginEnd="8dp"
-            app:backgroundTint="@null"/>
+            android:layout_marginEnd="8dp" />
 
         <Button
             android:id="@+id/btnConfirm"
+            style="@style/Widget.MusicPlayer.Button"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
             android:text="确定"
-            android:textColor="#FFFFFF"
-            android:background="@drawable/button_login_bg"
             android:textSize="15sp"
-            android:layout_marginStart="8dp"
-            app:backgroundTint="@null"/>
+            android:layout_marginStart="8dp" />
 
     </LinearLayout>
 

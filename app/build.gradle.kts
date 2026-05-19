@@ -28,8 +28,8 @@ android {
         applicationId = "com.xqf.musicplayer"
         minSdk = 31
         targetSdk = 35
-        versionCode = 20
-        versionName = "v2.0"
+        versionCode = 22
+        versionName = "v2.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

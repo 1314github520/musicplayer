@@ -4,6 +4,8 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,11 +18,13 @@ import androidx.fragment.app.Fragment;
 import androidx.palette.graphics.Palette;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 import coil.Coil;
 import coil.ImageLoader;
 import coil.request.ImageRequest;
 import coil.request.SuccessResult;
 import com.example.musicplayer.R;
+import com.example.musicplayer.adapter.CarouselAdapter;
 import com.example.musicplayer.core.theme.ThemeManager;
 import com.example.musicplayer.data.local.AppDatabase;
 import com.example.musicplayer.data.model.Song;
@@ -37,18 +41,23 @@ public class DiscoveryFragment extends Fragment {
     private TextView heroLyric;
     private TextView heroSubtitle;
     private TextView tabCategory;
-    private ImageView imgSong1, imgSong2, imgSong3;
     private ImageView btnHeroPlay;
     private View searchBar;
     private View layoutNewSongs;
-    private TextView tvSongName1, tvArtistName1, tvSongName2, tvArtistName2, tvSongName3, tvArtistName3;
     private RecyclerView recommendedSongList;
+    private RecyclerView carouselRecyclerView;
+    private View indicator1, indicator2, indicator3;
     private MainViewModel viewModel;
     private SearchResultAdapter recommendedAdapter;
+    private CarouselAdapter carouselAdapter;
     
     private static final int SEARCH_REQUEST_CODE = 1001;
+    private static final long CAROUSEL_INTERVAL = 3000; // 轮播间隔3秒
     
     private androidx.activity.result.ActivityResultLauncher<android.content.Intent> searchLauncher;
+    private Handler carouselHandler;
+    private Runnable carouselRunnable;
+    private int currentCarouselPosition = 0;
     
     // 用于保存正在加载的图片请求，以便在Fragment销毁时取消
     private List<ImageRequest> pendingImageRequests = new ArrayList<>();
@@ -86,30 +95,26 @@ public class DiscoveryFragment extends Fragment {
         heroLyric = view.findViewById(R.id.heroLyric);
         heroSubtitle = view.findViewById(R.id.heroSubtitle);
         tabCategory = view.findViewById(R.id.tabCategory);
-
-        imgSong1 = view.findViewById(R.id.imgSong1);
-        imgSong2 = view.findViewById(R.id.imgSong2);
-        imgSong3 = view.findViewById(R.id.imgSong3);
-
         btnHeroPlay = view.findViewById(R.id.btnHeroPlay);
         searchBar = view.findViewById(R.id.searchBar);
         recommendedSongList = view.findViewById(R.id.recommendedSongList);
+        carouselRecyclerView = view.findViewById(R.id.carouselRecyclerView);
         layoutNewSongs = view.findViewById(R.id.layoutNewSongs);
-        tvSongName1 = view.findViewById(R.id.tvSongName1);
-        tvArtistName1 = view.findViewById(R.id.tvArtistName1);
-        tvSongName2 = view.findViewById(R.id.tvSongName2);
-        tvArtistName2 = view.findViewById(R.id.tvArtistName2);
-        tvSongName3 = view.findViewById(R.id.tvSongName3);
-        tvArtistName3 = view.findViewById(R.id.tvArtistName3);
+        
+        // 轮播图指示器
+        indicator1 = view.findViewById(R.id.indicator1);
+        indicator2 = view.findViewById(R.id.indicator2);
+        indicator3 = view.findViewById(R.id.indicator3);
 
         setupSearch();
         setupRecommendedList();
+        setupCarousel();
         setupClickListeners();
         
         // Observe remote songs for the main discovery content
         viewModel.getRemoteSongs().observe(getViewLifecycleOwner(), songs -> {
             if (songs != null && !songs.isEmpty()) {
-                if (isAdded()) { // 检查 Fragment 是否已添加
+                if (isAdded()) {
                     updateDiscoveryContent(songs);
                 }
             }
@@ -143,6 +148,98 @@ public class DiscoveryFragment extends Fragment {
         });
 
         return view;
+    }
+    
+    private void setupCarousel() {
+        // 设置横向滚动的RecyclerView
+        LinearLayoutManager layoutManager = new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false);
+        carouselRecyclerView.setLayoutManager(layoutManager);
+        
+        // 使用ItemDecoration设置间距
+        carouselRecyclerView.addItemDecoration(new RecyclerView.ItemDecoration() {
+            @Override
+            public void getItemOffsets(@NonNull android.graphics.Rect outRect, @NonNull View view, 
+                                      @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
+                super.getItemOffsets(outRect, view, parent, state);
+                int spacing = 16;
+                int position = parent.getChildAdapterPosition(view);
+                
+                if (position == 0) {
+                    outRect.left = spacing;
+                }
+                outRect.right = spacing;
+                outRect.top = 8;
+                outRect.bottom = 8;
+            }
+        });
+        
+        // 初始化CarouselAdapter
+        carouselAdapter = new CarouselAdapter(new ArrayList<>(), song -> {
+            List<Song> currentSongs = viewModel.getRemoteSongs().getValue();
+            if (currentSongs != null) {
+                int index = currentSongs.indexOf(song);
+                if (index >= 0) {
+                    ((MainActivity) requireActivity()).playSongList(currentSongs, index);
+                } else {
+                    ((MainActivity) requireActivity()).playSong(song);
+                }
+            } else {
+                ((MainActivity) requireActivity()).playSong(song);
+            }
+        });
+        carouselRecyclerView.setAdapter(carouselAdapter);
+        
+        // 添加滚动监听来更新指示器
+        carouselRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                updateCarouselIndicator();
+            }
+        });
+    }
+    
+    private void startCarouselAutoScroll() {
+        stopCarouselAutoScroll();
+        
+        carouselHandler = new Handler(Looper.getMainLooper());
+        carouselRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (carouselAdapter != null && carouselAdapter.getItemCount() > 0) {
+                    currentCarouselPosition = (currentCarouselPosition + 1) % carouselAdapter.getItemCount();
+                    carouselRecyclerView.smoothScrollToPosition(currentCarouselPosition);
+                }
+                carouselHandler.postDelayed(this, CAROUSEL_INTERVAL);
+            }
+        };
+        
+        carouselHandler.postDelayed(carouselRunnable, CAROUSEL_INTERVAL);
+    }
+    
+    private void stopCarouselAutoScroll() {
+        if (carouselHandler != null && carouselRunnable != null) {
+            carouselHandler.removeCallbacks(carouselRunnable);
+        }
+    }
+    
+    private void updateCarouselIndicator() {
+        if (carouselRecyclerView == null || carouselAdapter == null) return;
+        
+        LinearLayoutManager layoutManager = (LinearLayoutManager) carouselRecyclerView.getLayoutManager();
+        if (layoutManager == null) return;
+        
+        int firstVisiblePosition = layoutManager.findFirstVisibleItemPosition();
+        
+        // 更新指示器状态
+        indicator1.setBackgroundResource(firstVisiblePosition == 0 ? 
+            R.drawable.carousel_indicator_active : R.drawable.carousel_indicator_inactive);
+        indicator2.setBackgroundResource(firstVisiblePosition == 1 ? 
+            R.drawable.carousel_indicator_active : R.drawable.carousel_indicator_inactive);
+        indicator3.setBackgroundResource(firstVisiblePosition == 2 ? 
+            R.drawable.carousel_indicator_active : R.drawable.carousel_indicator_inactive);
+        
+        currentCarouselPosition = firstVisiblePosition;
     }
     
     private void setupSearch() {
@@ -194,45 +291,11 @@ public class DiscoveryFragment extends Fragment {
             recommendedAdapter.setSongs(songs, "");
         }
 
-        ImageView[] songViews = {imgSong1, imgSong2, imgSong3};
-        TextView[] nameViews = {tvSongName1, tvSongName2, tvSongName3};
-        TextView[] artistViews = {tvArtistName1, tvArtistName2, tvArtistName3};
-
-        for (int i = 0; i < songViews.length; i++) {
-            if (songViews[i] != null) {
-                final Song song = (i < songs.size()) ? songs.get(i) : null;
-                String url = (song != null) ? song.coverUrl : null;
-                
-                android.util.Log.d("DiscoveryFragment", "加载图片 URL [" + i + "]: " + url);
-                
-                imageLoader.enqueue(new ImageRequest.Builder(requireContext())
-                        .data(url != null && !url.isEmpty() ? url : R.drawable.music)
-                        .target(songViews[i])
-                        .error(R.drawable.music)
-                        .placeholder(R.drawable.music)
-                        .crossfade(true)
-                        .build());
-                
-                if (song != null) {
-                    if (nameViews[i] != null) nameViews[i].setText(song.title);
-                    if (artistViews[i] != null) artistViews[i].setText(song.artist);
-                    
-                    // 获取父容器并设置点击监听
-                    try {
-                        View parentContainer = (View) songViews[i].getParent();
-                        if (parentContainer != null) {
-                            parentContainer.setOnClickListener(v -> {
-                                int index = songs.indexOf(song);
-                                if (index >= 0) {
-                                    ((MainActivity) requireActivity()).playSongList(songs, index);
-                                }
-                            });
-                        }
-                    } catch (Exception e) {
-                        android.util.Log.e("DiscoveryFragment", "设置点击监听失败", e);
-                    }
-                }
-            }
+        // 更新轮播图数据
+        if (carouselAdapter != null) {
+            carouselAdapter.updateData(songs);
+            // 启动自动轮播
+            startCarouselAutoScroll();
         }
     }
 
@@ -250,18 +313,15 @@ public class DiscoveryFragment extends Fragment {
                         public void onSuccess(@NonNull ImageRequest request, @NonNull SuccessResult result) {
                             Bitmap bitmap = ((BitmapDrawable) result.getDrawable()).getBitmap();
                             extractColor(bitmap);
-                            // 加载成功后从列表中移除
                             pendingImageRequests.remove(request);
                         }
                     })
                     .build();
-            // 保存请求以便在Fragment销毁时取消
             pendingImageRequests.add(request);
             imageLoader.enqueue(request);
         }
         
         if (heroLyric != null) {
-            // 显示正在播放状态
             if (title != null && !title.isEmpty() && !title.equals("未知歌曲")) {
                 heroLyric.setText(title);
                 if (heroSubtitle != null) {
@@ -309,10 +369,8 @@ public class DiscoveryFragment extends Fragment {
                 
                 int color;
                 if (isDarkMode) {
-                    // 深色模式：使用深暗色调
                     color = palette.getDarkMutedColor(Color.parseColor("#1E2228"));
                 } else {
-                    // 浅色模式优化：尝试获取柔和的浅色
                     int lightVibrant = palette.getLightVibrantColor(Color.TRANSPARENT);
                     int lightMuted = palette.getLightMutedColor(Color.TRANSPARENT);
                     
@@ -321,12 +379,11 @@ public class DiscoveryFragment extends Fragment {
                     } else if (lightVibrant != Color.TRANSPARENT) {
                         color = lightVibrant;
                     } else {
-                        // 兜底方案：取主色并大幅度提高亮度/降低饱和度
                         int dominant = palette.getDominantColor(Color.parseColor("#F5F7F9"));
                         float[] hsv = new float[3];
                         Color.colorToHSV(dominant, hsv);
-                        hsv[1] = Math.min(hsv[1], 0.12f); // 极低饱和度
-                        hsv[2] = 0.98f; // 极高亮度
+                        hsv[1] = Math.min(hsv[1], 0.12f);
+                        hsv[2] = 0.98f;
                         color = Color.HSVToColor(hsv);
                     }
                 }
@@ -335,7 +392,6 @@ public class DiscoveryFragment extends Fragment {
                     heroCard.setCardBackgroundColor(color);
                 }
                 
-                // 动态调整文本颜色
                 if (heroLyric != null) {
                     double luminance = androidx.core.graphics.ColorUtils.calculateLuminance(color);
                     int textColor;
@@ -358,6 +414,8 @@ public class DiscoveryFragment extends Fragment {
     
     @Override
     public void onDestroyView() {
+        stopCarouselAutoScroll();
+        
         if (getContext() != null) {
             ImageLoader imageLoader = Coil.imageLoader(getContext());
             for (ImageRequest request : pendingImageRequests) {
@@ -367,6 +425,9 @@ public class DiscoveryFragment extends Fragment {
         }
         if (recommendedSongList != null) {
             recommendedSongList.setAdapter(null);
+        }
+        if (carouselRecyclerView != null) {
+            carouselRecyclerView.setAdapter(null);
         }
         super.onDestroyView();
     }
