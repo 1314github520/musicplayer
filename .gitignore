@@ -16,3 +16,10 @@ local.properties
 keystore.properties
 
 
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
