@@ -9,7 +9,7 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
-        android:name=".MusicPlayerApplication"
+        android:name=".app.MusicPlayerApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -21,7 +21,7 @@
         android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config">
         <activity
-            android:name=".MainActivity"
+            android:name=".feature.main.MainActivity"
             android:exported="true"
             tools:ignore="MissingClass">
             <intent-filter>
@@ -32,22 +32,22 @@
         </activity>
 
         <activity
-            android:name=".SearchActivity"
+            android:name=".feature.search.SearchActivity"
             android:exported="false"
             android:theme="@style/Theme.MusicPlayer" />
 
         <activity
-            android:name=".LoginActivity"
+            android:name=".feature.auth.LoginActivity"
             android:exported="false"
             android:theme="@style/Theme.MusicPlayer" />
 
         <activity
-            android:name=".RegisterActivity"
+            android:name=".feature.auth.RegisterActivity"
             android:exported="false"
             android:theme="@style/Theme.MusicPlayer" />
 
         <service
-            android:name=".PlaybackService"
+            android:name=".feature.player.PlaybackService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="true"
             tools:ignore="MissingClass">

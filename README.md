@@ -1,10 +1,50 @@
 # 🎵 MusicPlayer
 
-一个功能完备的 Android 音乐播放器应用，采用酷狗风格设计，支持在线播放、本地音乐管理、歌词同步显示、深色模式等特性。
+一个前后端分离的 Android 音乐播放器项目，包含 Android 客户端、Node.js 后端和 MySQL 数据存储。项目围绕在线听歌、本地管理、歌词同步、用户系统和版本更新实现了一套完整的音乐应用基础能力。
 
 ![Version](https://img.shields.io/badge/version-v2.0-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Android%2012+-green.svg)
-![License](https://img.shields.io/badge/license-MIT-orange.svg)
+![Stack](https://img.shields.io/badge/stack-Android%20%2B%20Node.js-orange.svg)
+
+## 📚 目录
+
+- [项目简介](#-项目简介)
+- [项目亮点](#-项目亮点)
+- [核心功能](#-核心功能)
+- [技术栈](#-技术栈)
+- [项目结构](#-项目结构)
+- [快速开始](#-快速开始)
+- [配置说明](#-配置说明)
+- [API 接口文档](#-api-接口文档)
+- [架构设计](#-架构设计)
+- [典型使用流程](#-典型使用流程)
+- [测试](#-测试)
+- [已知问题与待优化](#-已知问题--待优化)
+- [相关文档](#-相关文档)
+
+## 📖 项目简介
+
+MusicPlayer 的整体目标不是只做一个简单的播放器 Demo，而是做一套更接近真实产品形态的音乐应用：
+
+- Android 客户端负责界面展示、播放控制、歌词展示、本地缓存、下载管理和用户交互。
+- Node.js 后端负责歌曲数据、音频流服务、用户鉴权、资料管理和版本更新接口。
+- Room 负责端侧缓存，MySQL 负责服务端持久化数据。
+
+当前仓库中的主要版本信息如下：
+
+- Android 版本：`versionCode 20` / `versionName v2.0`
+- Android SDK：`minSdk 31`、`targetSdk 35`、`compileSdk 35`
+- Android 语言级别：`Java 11`
+- 后端默认端口：`3000`
+
+## 🌟 项目亮点
+
+- 完整业务闭环：从发现歌曲、搜索、播放、歌词、收藏、下载，到账号登录、资料维护、版本更新，链路完整。
+- 在线与本地双栈能力：既支持服务端歌曲流式播放，也支持下载歌曲和用户手动导入本地音频统一管理。
+- 后台持续播放：基于 Media3 `MediaSessionService + ExoPlayer`，支持通知栏控制、音频焦点处理、耳机拔出自动暂停。
+- 歌词体验突出：支持 LRCLIB 歌词获取、LRC 解析、缓存复用，并结合播放进度进行实时同步显示。
+- 启动体验友好：采用“本地缓存先展示，远程数据后台同步”的双层数据策略，减少白屏并保留收藏、本地路径等状态。
+- 展示效果完整：全屏播放器包含黑胶旋转、背景模糊、动态取色、歌词滚动等视觉细节，适合作为课程设计、毕业设计或作品集项目展示。
 
 ## ✨ 核心功能
 
@@ -32,12 +72,13 @@
 
 ### 👤 用户系统
 - **JWT 认证** - 7 天有效期 Token 安全认证
-- **完整资料管理** - 头像上传、昵称、签名、性别、生日等个人信息编辑
+- **资料管理** - 头像上传、昵称、性别、生日等个人信息编辑
 - **密码安全** - bcrypt 加密存储，支持修改密码和注销账号
 - **登录状态持久化** - SharedPreferences 保存会话信息
 
 ### 📚 音乐库管理
 - **发现页** - Hero Card 动态背景 + 推荐歌单 + 新歌速递
+- **分类浏览** - 支持按歌手、专辑等维度查看歌曲分类
 - **本地搜索** - 支持歌曲名/歌手/专辑的不区分大小写模糊搜索
 - **收藏功能** - 收藏/取消收藏，独立页面展示收藏列表
 - **最近播放** - 7 天滑动窗口自动清理过期记录
@@ -64,80 +105,50 @@
 |------|------|------|
 | **Express** | ^4.18.2 | Web 应用框架 |
 | **MySQL2** | ^3.6.0 | MySQL 驱动（连接池模式） |
-| **bcryptjs** | latest | 密码哈希加密 |
-| **jsonwebtoken** | latest | JWT 生成与验证 |
+| **bcryptjs** | 实际运行依赖 | 密码哈希加密 |
+| **jsonwebtoken** | 实际运行依赖 | JWT 生成与验证 |
 | **Nodemon** | ^3.0.1 | 开发热重载工具 |
 
 ### 数据库
 - **远程数据库**: MySQL (`musicplayer` 数据库)
-- **本地数据库**: Room SQLite (`music_db`, 版本 9)
+- **本地数据库**: Room SQLite (`music_db`, 版本 10)
+
+> 注意：`web/server.js` 已实际使用 `bcryptjs` 和 `jsonwebtoken`，但这两个包当前尚未写入 `web/package.json`，首次启动前需要手动安装。
 
 ## 📁 项目结构
 
-```
+```text
 MusicPlayer/
-├── app/src/main/
-│   ├── java/com/example/musicplayer/    # Java 源码 (39 个文件)
-│   │   ├── MainActivity.java            # 主 Activity (1173 行)
-│   │   ├── MainViewModel.java           # MVVM 状态中心 (372 行)
-│   │   ├── PlaybackService.java         # 前台播放服务
-│   │   │
-│   │   ├── fragment/                    # UI 页面 (10 个 Fragment)
-│   │   │   ├── DiscoveryFragment.java   # 发现页
-│   │   │   ├── PlayerFragment.java      # 全屏播放器
-│   │   │   ├── MineFragment.java        # 个人中心
-│   │   │   ├── SettingsFragment.java    # 设置页
-│   │   │   └── ...                      # 其他 Fragment
-│   │   │
-│   │   ├── database/                    # 数据层
-│   │   │   ├── AppDatabase.java         # Room 数据库单例
-│   │   │   ├── Song.java                # 歌曲 Entity
-│   │   │   ├── SongDao.java             # 歌曲 DAO (17 个方法)
-│   │   │   ├── RecentPlay.java          # 最近播放 Entity
-│   │   │   └── RecentPlayDao.java       # 最近播放 DAO
-│   │   │
-│   │   ├── network/                     # 网络层
-│   │   │   ├── HttpClient.java          # OkHttp 单例
-│   │   │   ├── RetryInterceptor.java    # 重试拦截器 (3 次)
-│   │   │   ├── LrcLibService.java       # LRCLIB 歌词 API
-│   │   │   ├── DownloadManager.java     # 下载管理器
-│   │   │   └── UpdateManager.java       # 应用更新检查
-│   │   │
-│   │   ├── user/                        # 用户系统
-│   │   │   ├── UserManager.java         # 用户会话管理
-│   │   │   ├── User.java                # 用户数据模型
-│   │   │   ├── LoginActivity.java       # 登录页
-│   │   │   └── RegisterActivity.java    # 注册页
-│   │   │
-│   │   ├── lyric/                       # 歌词系统
-│   │   │   ├── LyricUtils.java          # LRC 解析器
-│   │   │   ├── LyricAdapter.java        # 歌词适配器
-│   │   │   └── LyricCacheManager.java   # 歌词缓存管理
-│   │   │
-│   │   └── utils/                       # 工具类
-│   │       ├── ThemeManager.java        # 主题管理器
-│   │       ├── ErrorHandler.java        # 统一错误处理
-│   │       ├── Constants.java           # 全局常量
-│   │       └── ...                      # 其他工具
-│   │
-│   └── res/                             # 资源文件
-│       ├── layout/                      # 24 个布局文件
-│       ├── drawable/                    # 28 个 Drawable 资源
-│       ├── values/                      # 浅色主题资源
-│       ├── values-night/                # 深色主题资源
-│       ├── anim/                        # 8 个动画资源
-│       └── raw/                         # Lottie 动画 JSON
-│
-├── web/                                 # 后端服务
-│   ├── server.js                        # Express API 服务器
-│   ├── package.json                     # Node.js 依赖
-│   ├── sql/users.sql                    # 数据库建表脚本
-│   └── index.html                       # 默认首页
-│
-├── database_indexes.sql                 # MySQL 性能优化索引
-├── build.gradle.kts                     # 项目级构建配置
-├── app/build.gradle.kts                # 应用级构建配置
-└── gradle.properties                   # Gradle 属性配置
+├─ app/
+│  ├─ build.gradle.kts
+│  └─ src/main/
+│     ├─ AndroidManifest.xml
+│     ├─ java/com/example/musicplayer/
+│     │  ├─ app/                     # Application 初始化
+│     │  ├─ core/                    # 常量、网络、歌词、主题等核心能力
+│     │  ├─ data/                    # Room 数据库与数据模型
+│     │  └─ feature/
+│     │     ├─ auth/                 # 登录注册与用户管理
+│     │     ├─ discovery/            # 发现页与分类浏览
+│     │     ├─ library/              # 收藏、本地、最近播放
+│     │     ├─ main/                 # MainActivity / MainViewModel
+│     │     ├─ player/               # 播放器、下载、播放服务
+│     │     ├─ profile/              # 个人中心与设置
+│     │     ├─ search/               # 搜索页
+│     │     └─ update/               # 版本更新
+│     └─ res/
+├─ web/
+│  ├─ server.js
+│  ├─ package.json
+│  ├─ sql/
+│  │  ├─ users.sql
+│  │  └─ version.sql
+│  ├─ index.html
+│  └─ 404.html
+├─ PROJECT_INTRODUCTION.md
+├─ DEPLOYMENT_GUIDE.md
+├─ CLAUDE.md
+└─ database_indexes.sql
 ```
 
 ## 🚀 快速开始
@@ -145,10 +156,10 @@ MusicPlayer/
 ### 环境要求
 
 **Android 端:**
-- Android Studio Hedgehog (2023.1.1) 或更高版本
-- JDK 11+
-- Android SDK (compileSdk: 35, minSdk: 31)
-- Gradle 8.7+
+- Android Studio 较新版本
+- 建议使用 JDK 17 运行 Gradle
+- Android SDK (`compileSdk 35`, `minSdk 31`)
+- 使用仓库自带 Gradle Wrapper
 
 **后端:**
 - Node.js 16+
@@ -184,16 +195,20 @@ CREATE DATABASE musicplayer CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 mysql -u your_username -p musicplayer < sql/users.sql
 ```
 
-3. 创建 `.env` 文件 (参考 `DEPLOYMENT_GUIDE.md`):
+3. 如需版本更新能力，可继续导入:
 
-```env
-DB_HOST=localhost
-DB_USER=your_username
-DB_PASSWORD=your_password
-DB_NAME=musicplayer
-JWT_SECRET=your_jwt_secret_key
-PORT=3000
+```bash
+mysql -u your_username -p musicplayer < sql/version.sql
 ```
+
+4. 当前仓库中的后端配置不是 `.env` 驱动，而是直接写在 `web/server.js` 中，包括：
+
+- 端口：`3000`
+- JWT Secret
+- MySQL 连接信息
+- 静态资源目录：`/musicplayer`
+
+如果你要本地部署，请先修改这些配置。
 
 #### 启动服务器
 
@@ -207,6 +222,14 @@ npm start
 
 服务器将在 `http://localhost:3000` 启动
 
+#### 补充依赖
+
+根据当前仓库代码，首次启动前建议补装：
+
+```bash
+npm install bcryptjs jsonwebtoken
+```
+
 ### 3️⃣ Android 端配置
 
 #### 配置签名密钥
@@ -214,10 +237,10 @@ npm start
 在项目根目录创建 `keystore.properties` 文件:
 
 ```properties
-KEYSTORE_FILE=path/to/your.keystore
-KEYSTORE_PASSWORD=your_password
-KEY_ALIAS=your_alias
-KEY_PASSWORD=your_key_password
+keystore.path=path/to/your.keystore
+keystore.password=your_password
+keystore.alias=your_alias
+keystore.keyPassword=your_key_password
 ```
 
 #### 同步 Gradle
@@ -226,10 +249,18 @@ KEY_PASSWORD=your_key_password
 
 #### 修改 API 地址 (可选)
 
-如果后端不在本地运行，修改 [Constants.java](app/src/main/java/com/example/musicplayer/Constants.java):
+如果后端不在默认地址运行，优先检查这些位置：
+
+- `app/src/main/java/com/example/musicplayer/core/Constants.java`
+- `app/src/main/java/com/example/musicplayer/feature/main/MainViewModel.java`
+- `app/src/main/java/com/example/musicplayer/feature/update/UpdateManager.java`
+
+其中 `Constants.java` 中的写法如下：
 
 ```java
-public static final String BASE_URL = "http://your-server-ip:3000";
+public static final class API {
+    public static final String BASE_URL = "http://your-server-ip:3000";
+}
 ```
 
 ### 4️⃣ 运行应用
@@ -237,6 +268,35 @@ public static final String BASE_URL = "http://your-server-ip:3000";
 1. 连接 Android 设备或启动模拟器
 2. 点击 Android Studio 的 ▶️ Run 按钮
 3. 应用将安装并自动启动
+
+## ⚙️ 配置说明
+
+### Android 端权限
+
+应用在清单中声明了这些关键权限：
+
+- `INTERNET`：网络请求
+- `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_MEDIA_PLAYBACK`：后台播放
+- `POST_NOTIFICATIONS`：通知权限
+- `REQUEST_INSTALL_PACKAGES`：APK 更新安装
+
+同时还声明了 `FileProvider`，用于更新下载后的 APK 安装流程。
+
+### 网络与资源
+
+- Android 端默认使用明文 HTTP，并在清单中开启了 `usesCleartextTraffic="true"`。
+- 后端通过 `/resource` 和 `/musicplayer` 暴露静态文件，实际资源根目录默认写死为 `/musicplayer`。
+- 如果你的本地环境没有这个目录，歌曲和图片资源访问会失败。
+
+### 数据库初始化说明
+
+仓库中提供了：
+
+- `web/sql/users.sql`
+- `web/sql/version.sql`
+- `database_indexes.sql`
+
+但歌曲主表数据并未完整包含在上述 SQL 中。如果只导入现有 SQL，用户和版本相关接口可初始化，歌曲接口仍需要你自行准备 `songs` 表及数据。
 
 ## 📡 API 接口文档
 
@@ -287,17 +347,6 @@ public static final String BASE_URL = "http://your-server-ip:3000";
 - 所有 UI 元素在两种模式下均有良好的对比度和可读性
 - 平滑的主题过渡动画提升用户体验
 
-## 📸 界面预览
-
-> *截图待补充*
-
-### 主要界面
-- 登录/注册页面 - 渐变背景 + 圆角卡片设计
-- 发现页 - Hero Card + 推荐歌单 + 新歌速递
-- 全屏播放器 - 黑胶唱片 + 模糊背景 + 歌词同步
-- 个人中心 - 用户资料 + 功能网格 + AI 助手
-- 设置页 - iOS 风格设置列表
-
 ## 🔧 架构设计
 
 ### MVVM + 单 Activity 多 Fragment
@@ -340,6 +389,32 @@ public static final String BASE_URL = "http://your-server-ip:3000";
 (歌词同步/进度更新/切歌事件)
 ```
 
+## 🔄 典型使用流程
+
+### 1. 启动与数据准备
+1. 应用启动后先检查登录状态，未登录则进入登录页。
+2. 主界面优先从 Room 读取本地歌曲列表，避免启动白屏。
+3. 后台再请求服务端歌曲数据，同步并合并到本地数据库。
+4. 同步过程中尽量保留收藏、下载路径和导入状态等本地信息。
+
+### 2. 发现与播放
+1. 用户在发现页浏览推荐歌曲或进入搜索页查找目标歌曲。
+2. 点击歌曲后，`MainActivity` 将歌曲转换为 `MediaItem` 并交给 `MediaController`。
+3. `PlaybackService` 中的 ExoPlayer 开始播放，通知栏同步出现播放控制。
+4. 播放状态、歌曲信息、进度和歌词通过 `MainViewModel` 分发给各页面。
+
+### 3. 歌词加载与同步
+1. 播放开始后，优先读取数据库或缓存中的歌词。
+2. 若本地没有歌词，则请求 LRCLIB。
+3. 获取到 LRC 后解析为时间轴结构并写回本地数据库。
+4. 播放过程中根据当前进度定位歌词行，实现实时高亮与滚动同步。
+
+### 4. 收藏、下载与本地管理
+1. 用户可在播放器或列表页直接收藏歌曲。
+2. 下载功能将歌曲保存到应用外部音乐目录，并通过通知栏展示进度。
+3. 下载完成后自动更新数据库，将该歌曲标记为本地文件。
+4. 用户也可手动导入本地音频，系统会和下载音乐分组展示。
+
 ## 💡 核心技术亮点
 
 ### 1. 网络请求优化
@@ -372,7 +447,7 @@ private void updateLyricPosition() {
 ### 4. 数据同步策略
 - 远端 songs 表作为"权威数据源"
 - 本地 Room 作为离线缓存 + 本地状态扩展
-- `isLocal`、`isFavorite`、`lyrics` 字段本地独有，不被覆盖
+- `isLocal`、`isFavorite`、`lyrics` 等本地状态尽量保留，不被远程同步覆盖
 - 批量同步使用 IGNORE 策略保护本地修改
 
 ### 5. 性能优化
@@ -431,7 +506,7 @@ private void updateLyricPosition() {
 - id, songId, timestamp (播放时间戳)
 
 **特点:**
-- 版本 9，启用破坏性迁移
+- 当前版本 10，已包含 `9 -> 10` 迁移
 - 最近播放 7 天滑动窗口自动清理
 - 支持本地模糊搜索 (title/singer/album)
 
@@ -491,14 +566,17 @@ release/*     - 发布分支
 
 ### 当前版本限制
 - ⚠️ JWT Secret 硬编码，生产环境需改用环境变量
-- ⚠️ Room 使用破坏性迁移，版本升级会丢失本地数据
+- ⚠️ 后端配置仍然硬编码在 `web/server.js` 中，尚未抽离到 `.env`
 - ⚠️ 缺少 HTTPS/TLS 配置
 - ⚠️ 后端无请求频率限制 (Rate Limiting)
 - ⚠️ ProGuard 未配置有效混淆规则
 - ⚠️ 测试覆盖率极低 (< 5%)
+- ⚠️ `web/package.json` 未声明 `bcryptjs` 和 `jsonwebtoken`
+- ⚠️ 仓库中当前没有 `LICENSE` 文件
 
 ### 建议优化项
-- 🔧 实现 Room Migration 替代破坏性迁移
+- 🔧 补齐后端依赖声明并增加锁文件
+- 🔧 引入 `.env` 配置替代硬编码
 - 🔧 添加 HTTPS 支持
 - 🔧 实现请求限流中间件
 - 🔧 补充核心模块单元测试
@@ -507,9 +585,14 @@ release/*     - 发布分支
 - 🔧 集成 Crashlytics 错误监控
 - 🔧 实现离线模式完整支持
 
-## 📄 许可证
+## 📄 相关文档
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
+- [PROJECT_INTRODUCTION.md](./PROJECT_INTRODUCTION.md) - 项目介绍书，适合答辩或项目汇报
+- [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) - 部署与上线说明
+- [CLAUDE.md](./CLAUDE.md) - 开发者视角的架构速览
+- [database_indexes.sql](./database_indexes.sql) - MySQL 查询优化索引脚本
+- [web/sql/users.sql](./web/sql/users.sql) - 用户表初始化脚本
+- [web/sql/version.sql](./web/sql/version.sql) - 版本更新表初始化脚本
 
 ## 👥 贡献者
 
