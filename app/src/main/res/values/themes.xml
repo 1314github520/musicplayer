@@ -65,16 +65,29 @@
     </style>
 
     <style name="BlueDatePicker" parent="Theme.Material3.DayNight.Dialog">
-        <item name="colorPrimary">#2196F3</item>
+        <item name="colorPrimary">@color/date_picker_accent</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSurface">@color/card_bg</item>
         <item name="colorOnSurface">@color/text_primary</item>
-        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorOnSurfaceVariant">@color/date_picker_text_secondary</item>
         <item name="android:windowBackground">@color/card_bg</item>
-        <item name="android:headerBackground">#2196F3</item>
-        <item name="android:calendarTextColor">@color/text_primary</item>
-        <item name="android:dayOfWeekBackground">@color/card_bg</item>
         <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/date_picker_text_secondary</item>
+        <!-- 强制使用 spinner 模式，避免 calendar 视图年份切换失效 -->
+        <item name="android:datePickerMode">spinner</item>
+        <!-- 专用按钮样式，确保浅色模式下清晰可见 -->
+        <item name="buttonBarPositiveButtonStyle">@style/DatePickerButton.Positive</item>
+        <item name="buttonBarNegativeButtonStyle">@style/DatePickerButton.Negative</item>
+    </style>
+
+    <!-- DatePicker 专用按钮样式 -->
+    <style name="DatePickerButton.Positive" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">@color/date_picker_accent</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="DatePickerButton.Negative" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">@color/date_picker_text_secondary</item>
     </style>
 
     <!-- Circle Image Style for ShapeableImageView -->

@@ -1,18 +1,94 @@
+# ==========================================
+# Android Studio / Gradle
+# ==========================================
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
+.gradle/
+/build/
+/app/build/
+/app/release/
+/captures/
+.externalNativeBuild/
+.cxx/
+.kotlin/
+
+# ==========================================
+# 签名密钥与本地配置（切勿提交）
+# ==========================================
 keystore.properties
+local.properties
+/key/
+*.keystore
+*.jks
+*.p12
+*.pem
 
+# ==========================================
+# IntelliJ IDEA
+# ==========================================
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/shelf/
+.idea/httpRequests/
+.idea/deploymentTargetSelector.xml
+.idea/deviceManager.xml
+.idea/studiobot.xml
+.idea/claudeCodeTabState.xml
+.idea/markdown.xml
+.idea/.name
 
+# ==========================================
+# 构建产物
+# ==========================================
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+*.jar
+*.war
+*.aar
+
+# ==========================================
+# Node.js 后端 (web/)
+# ==========================================
+web/node_modules/
+web/npm-debug.log*
+web/yarn-debug.log*
+web/yarn-error.log*
+web/.env
+web/.env.local
+web/dist/
+web/build/
+
+# ==========================================
+# 日志与临时文件
+# ==========================================
+*.log
+logs/
+*.tmp
+*.bak
+*.swp
+*~
+
+# ==========================================
+# 操作系统生成文件
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ==========================================
+# 其他
+# ==========================================
+.claude/
+*.hprof

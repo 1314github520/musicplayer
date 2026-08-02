@@ -114,17 +114,99 @@ public class EditProfileFragment extends Fragment {
     private void showDatePicker() {
         java.util.Calendar calendar = java.util.Calendar.getInstance();
         String currentBirthday = tvBirthday.getText().toString();
-        if (!"未设置".equals(currentBirthday) && !"null".equals(currentBirthday)) {
+        if (!"未设置".equals(currentBirthday) && !"null".equals(currentBirthday) && currentBirthday.contains("-")) {
             try {
-                String[] parts = currentBirthday.split("-");
-                calendar.set(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]) - 1, Integer.parseInt(parts[2]));
-            } catch (Exception ignored) {}
+                // 先用 formatBirthday 清洗可能的后缀（T/Z/时间部分），再解析
+                String cleaned = formatBirthday(currentBirthday);
+                String[] parts = cleaned.split("-");
+                if (parts.length >= 3) {
+                    int year = Integer.parseInt(parts[0]);
+                    int month = Integer.parseInt(parts[1]);
+                    int day = Integer.parseInt(parts[2]);
+                    // 校验日期合法性，避免非法值导致 DatePicker 异常
+                    if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                        calendar.set(year, month - 1, day);
+                    }
+                }
+            } catch (Exception e) {
+                Log.w("EditProfile", "解析生日失败: " + currentBirthday, e);
+            }
         }
 
-        new android.app.DatePickerDialog(getContext(), R.style.BlueDatePicker, (view, year, month, dayOfMonth) -> {
-            String date = String.format(java.util.Locale.getDefault(), "%d-%02d-%02d", year, month + 1, dayOfMonth);
-            tvBirthday.setText(date);
-        }, calendar.get(java.util.Calendar.YEAR), calendar.get(java.util.Calendar.MONTH), calendar.get(java.util.Calendar.DAY_OF_MONTH)).show();
+        int initYear = calendar.get(java.util.Calendar.YEAR);
+        int initMonth = calendar.get(java.util.Calendar.MONTH);
+        int initDay = calendar.get(java.util.Calendar.DAY_OF_MONTH);
+
+        android.app.DatePickerDialog dialog = new android.app.DatePickerDialog(
+                requireContext(),
+                R.style.BlueDatePicker,
+                (view, year, month, dayOfMonth) -> {
+                    String date = String.format(java.util.Locale.getDefault(), "%d-%02d-%02d", year, month + 1, dayOfMonth);
+                    Log.d("EditProfile", "DatePicker 回调: year=" + year + " month=" + (month + 1) + " day=" + dayOfMonth + " -> " + date);
+                    tvBirthday.setText(date);
+                },
+                initYear, initMonth, initDay
+        );
+
+        // 给年份 NumberPicker 加《》格式化，视觉标识可独立滚动跨年
+        setupYearPickerWithBrackets(dialog, initYear);
+
+        dialog.show();
+
+        // 双重保险：隐藏 CalendarView，强制只显示 Spinner（即使样式未生效也能切年）
+        try {
+            java.lang.reflect.Method[] methods = android.widget.DatePicker.class.getDeclaredMethods();
+            for (java.lang.reflect.Method m : methods) {
+                if (m.getName().equals("setCalendarViewShown")) {
+                    m.invoke(dialog.getDatePicker(), false);
+                    break;
+                }
+            }
+        } catch (Exception ignored) {
+            // 反射失败时由样式中的 android:datePickerMode=spinner 兜底
+        }
+
+        // 兜底：手动设置按钮颜色，确保浅色模式可见（即使样式未生效）
+        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)
+                .setTextColor(getResources().getColor(R.color.date_picker_accent, null));
+        dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)
+                .setTextColor(getResources().getColor(R.color.date_picker_text_secondary, null));
+    }
+
+    /**
+     * 给年份 NumberPicker 加《》格式化，作为可跨年滚动的视觉提示
+     * spinner 模式下 DatePicker 内部按 年/月/日 顺序排列 NumberPicker
+     */
+    private void setupYearPickerWithBrackets(android.app.DatePickerDialog dialog, int currentYear) {
+        try {
+            android.widget.DatePicker datePicker = dialog.getDatePicker();
+            // 遍历子视图找到所有 NumberPicker
+            java.util.List<android.widget.NumberPicker> pickers = new java.util.ArrayList<>();
+            findNumberPickers(datePicker, pickers);
+            if (!pickers.isEmpty()) {
+                // spinner 模式下第一个 NumberPicker 是年份
+                android.widget.NumberPicker yearPicker = pickers.get(0);
+                yearPicker.setFormatter(value -> "《 " + value + " 》");
+                // 设置 formatter 后需要触发重绘才能生效
+                yearPicker.invalidate();
+            }
+        } catch (Exception e) {
+            Log.w("EditProfile", "设置年份《》格式失败", e);
+        }
+    }
+
+    /**
+     * 递归查找 ViewGroup 中的所有 NumberPicker
+     */
+    private void findNumberPickers(View view, java.util.List<android.widget.NumberPicker> out) {
+        if (view instanceof android.widget.NumberPicker) {
+            out.add((android.widget.NumberPicker) view);
+        } else if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                findNumberPickers(group.getChildAt(i), out);
+            }
+        }
     }
 
     private String formatBirthday(String birthday) {

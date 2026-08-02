@@ -71,4 +71,8 @@
     <color name="player_btn_bg">#22FFFFFF</color>
     <color name="player_btn_ripple">#40FFFFFF</color>
     <color name="button_secondary_bg">#2C2C2E</color>
+
+    <!-- DatePicker 专用颜色（深色模式 - 在 #1E2228 背景上清晰可见） -->
+    <color name="date_picker_accent">#64B5F6</color>
+    <color name="date_picker_text_secondary">#999999</color>
 </resources>

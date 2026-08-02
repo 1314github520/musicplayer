@@ -72,6 +72,10 @@
     <color name="accent_teal">#006060</color>
     <color name="button_secondary_bg">#E5E5EA</color>
     <color name="colorPrimary">#26D1D1</color>
+
+    <!-- DatePicker 专用颜色（浅色模式 - 在 #F5F7F9 背景上清晰可见） -->
+    <color name="date_picker_accent">#1976D2</color>
+    <color name="date_picker_text_secondary">#444444</color>
     <color name="gray">#9E9E9E</color>
     <color name="light_gray">#E0E0E0</color>
     <color name="red">#FF4444</color>
